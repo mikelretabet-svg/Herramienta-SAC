@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Horario — SAC</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://*.supabase.co; img-src 'self' data: blob:;">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f1117;--bg2:#1a1d27;--bg3:#242836;--bg4:#2e3344;--text:#e8eaed;--text2:#9aa0b0;--text3:#6b7280;--accent:#6366f1;--accent2:#818cf8;--morning:#4FC3F7;--morning-bg:rgba(79,195,247,.15);--mid:#81C784;--mid-bg:rgba(129,199,132,.15);--afternoon:#FFB74D;--afternoon-bg:rgba(255,183,77,.15);--closing:#BA68C8;--closing-bg:rgba(186,104,200,.15);--sick:#E57373;--vacation:#FFF176;--danger:#ef4444;--warning:#f59e0b;--success:#22c55e;--border:#2e3344;--shadow:0 4px 24px rgba(0,0,0,.3)}
+:root.light{--bg:#f4f5f7;--bg2:#ffffff;--bg3:#e8eaed;--bg4:#d1d5db;--text:#1a1d27;--text2:#4b5563;--text3:#6b7280;--accent:#6366f1;--accent2:#4f46e5;--morning:#0288D1;--morning-bg:rgba(2,136,209,.1);--mid:#2E7D32;--mid-bg:rgba(46,125,50,.1);--afternoon:#E65100;--afternoon-bg:rgba(230,81,0,.1);--closing:#7B1FA2;--closing-bg:rgba(123,31,162,.1);--sick:#C62828;--vacation:#F9A825;--danger:#dc2626;--warning:#d97706;--success:#16a34a;--border:#d1d5db;--shadow:0 4px 24px rgba(0,0,0,.08)}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:360px;width:100%;box-shadow:var(--shadow)}
+.login-card h1{font-size:24px;font-weight:700;margin-bottom:4px;text-align:center}
+.login-card .sub{font-size:13px;color:var(--text3);text-align:center;margin-bottom:24px}
+.login-card input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;margin-bottom:12px;outline:none}
+.login-card input:focus{border-color:var(--accent)}
+.login-btn{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.login-btn:hover{background:var(--accent2)}
+.login-error{color:var(--danger);font-size:12px;text-align:center;margin-top:8px;min-height:18px}
+
+#app{display:none}
+.app-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50}
+.app-header h1{font-size:16px;font-weight:700}
+.user-info{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
+.tabs{display:flex;gap:0;background:var(--bg3);border-radius:10px;padding:3px;margin:12px 16px}
+.tab{flex:1;padding:8px 4px;text-align:center;font-size:12px;font-weight:600;color:var(--text3);border:none;background:none;cursor:pointer;border-radius:8px;font-family:inherit;transition:all .2s}
+.tab.active{background:var(--accent);color:#fff}
+.content{padding:12px 16px;max-width:800px;margin:0 auto}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+.card-title{font-size:14px;font-weight:700;margin-bottom:10px}
+.shift-badge{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600}
+.shift-badge.morning{background:var(--morning-bg);color:var(--morning)}
+.shift-badge.mid{background:var(--mid-bg);color:var(--mid)}
+.shift-badge.afternoon,.shift-badge.closing,.shift-badge.afternoon_14_22{background:var(--afternoon-bg);color:var(--afternoon)}
+.shift-badge.closing{color:var(--closing)}
+.shift-badge.vacation{background:rgba(255,241,118,.12);color:var(--vacation)}
+.shift-badge.sick{background:rgba(229,115,115,.12);color:var(--sick)}
+.shift-badge.free{background:var(--bg3);color:var(--text3)}
+
+.progress-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin-top:6px}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+
+.day-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.day-row:last-child{border:none}
+.day-label{font-size:13px;font-weight:600;min-width:80px}
+.day-label .date{font-size:11px;font-weight:400;color:var(--text3)}
+.day-label .holiday-tag{font-size:9px;color:var(--danger);font-weight:600;display:block}
+
+.sched-table{width:100%;border-collapse:separate;border-spacing:2px;font-size:11px}
+.sched-table th{padding:6px 3px;text-align:center;font-weight:600;color:var(--text2);background:var(--bg3);border-radius:4px;font-size:10px}
+.sched-table th.holiday{background:rgba(239,68,68,.12);border-bottom:2px solid var(--danger)}
+.sched-table td{padding:4px 2px;text-align:center;border-radius:4px;font-size:10px}
+.sched-table td.me{background:var(--accent);color:#fff;font-weight:700;border-radius:4px}
+.sched-table .emp-n{text-align:left;font-weight:600;padding:4px 6px;white-space:nowrap;font-size:11px}
+.sched-table .s-m{background:var(--morning-bg);color:var(--morning)}
+.sched-table .s-me{background:var(--mid-bg);color:var(--mid)}
+.sched-table .s-t{background:var(--afternoon-bg);color:var(--afternoon)}
+.sched-table .s-c{background:var(--closing-bg);color:var(--closing)}
+.sched-table .s-a{background:rgba(255,241,118,.1);color:var(--vacation);font-size:9px}
+.sched-table .s-f{color:var(--text3);font-size:9px}
+
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px}
+.month-hdr{text-align:center;font-size:10px;font-weight:600;color:var(--text3);padding:4px 0}
+.month-cell{text-align:center;padding:6px 2px;border-radius:6px;font-size:10px;min-height:44px;cursor:default;border:1px solid transparent}
+.month-cell.today{border:2px solid var(--accent)}
+.month-cell.holiday-cell{background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2)}
+.month-cell .day-num{font-weight:600;font-size:12px;margin-bottom:2px}
+.month-cell .shift-dot{font-size:9px;font-weight:600}
+
+.swap-form .field{margin-bottom:14px}
+.swap-form label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px}
+.swap-form select,.swap-form input,.swap-form textarea{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none}
+.swap-form select:focus,.swap-form input:focus,.swap-form textarea:focus{border-color:var(--accent)}
+.btn{padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2)}
+
+.swap-item{padding:12px;border-radius:8px;margin-bottom:8px;border-left:3px solid var(--border)}
+.swap-item.pending{border-left-color:var(--warning);background:rgba(245,158,11,.05)}
+.swap-item.approved{border-left-color:var(--success);background:rgba(34,197,94,.05)}
+.swap-item.rejected{border-left-color:var(--danger);background:rgba(239,68,68,.05)}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:opacity .3s}.toast.show{opacity:1}.toast.success{background:var(--success);color:#000}.toast.error{background:var(--danger);color:#fff}
+
+.panel{display:none}.panel.active{display:block}
+@media(max-width:600px){.sched-table{font-size:9px}.sched-table th{font-size:8px}.sched-table .emp-n{font-size:9px}}
+@media print{body{background:#fff!important;color:#000!important}.app-header,.tabs,.toast,.btn,.no-print{display:none!important}.content{padding:0!important}.card{break-inside:avoid;border:1px solid #ccc!important;background:#fff!important}.shift-badge{border:1px solid #ccc}.month-cell{border:1px solid #eee}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <h1>Mi Horario</h1>
+    <div class="sub">Portal del trabajador SAC</div>
+    <input type="text" id="loginUser" placeholder="Usuario" autocomplete="username">
+    <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+    <button class="login-btn" onclick="doLogin()">Acceder</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="app-header">
+    <h1>Mi Horario</h1>
+    <div class="user-info">
+      <span id="greeting"></span>
+      <button class="btn" style="padding:4px 8px;font-size:14px" onclick="toggleTheme()" id="themeBtn" title="Cambiar tema">🌙</button>
+      <button class="btn" style="padding:4px 8px;font-size:14px" onclick="refreshData()" id="refreshBtn" title="Actualizar datos">🔄</button>
+      <button class="btn" style="padding:4px 10px;font-size:11px" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('home',this)">Inicio</button>
+    <button class="tab" onclick="switchTab('calendar',this)">Calendario</button>
+    <button class="tab" onclick="switchTab('team',this)">Equipo</button>
+    <button class="tab" onclick="switchTab('nomina',this)">Nómina</button>
+    <button class="tab" onclick="switchTab('swap',this)">Cambios</button>
+  </div>
+  <div class="content">
+    <div class="panel active" id="panel-home"></div>
+    <div class="panel" id="panel-calendar"></div>
+    <div class="panel" id="panel-team"></div>
+    <div class="panel" id="panel-nomina"></div>
+    <div class="panel" id="panel-swap"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Security: HTML escape function to prevent XSS
+function esc(s){if(s===null||s===undefined)return '';const d=document.createElement('div');d.textContent=String(s);return d.innerHTML}
+
+const SUPABASE_URL='https://slmoftaapllhshmbtwpb.supabase.co';
+const SUPABASE_KEY='sb_publishable_oJ3mptvnxvmri14xu2cbow__05Gdy5r';
+const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null;
+let currentEmpId=null;
+
+const SHIFTS={morning:{id:'morning',name:'Mañana',time:'08:00-16:00',start:8,end:16,color:'#4FC3F7',abbr:'M'},mid:{id:'mid',name:'Medio',time:'12:00-20:00',start:12,end:20,color:'#81C784',abbr:'Me'},afternoon:{id:'afternoon',name:'Tarde',time:'15:00-23:00',start:15,end:23,color:'#FFB74D',abbr:'T'},closing:{id:'closing',name:'Cierre',time:'16:00-24:00',start:16,end:24,color:'#BA68C8',abbr:'C'},afternoon_14_22:{id:'afternoon_14_22',name:'Tarde 14-22',time:'14:00-22:00',start:14,end:22,color:'#FFB74D',abbr:'T*'},jesus_fri:{id:'jesus_fri',name:'Viernes',time:'15:00-00:00',start:15,end:24,color:'#BA68C8',abbr:'VJ'},jesus_sat:{id:'jesus_sat',name:'Sábado',time:'12:00-20:00',start:12,end:20,color:'#81C784',abbr:'SJ'},jesus_sun:{id:'jesus_sun',name:'Domingo',time:'15:00-00:00',start:15,end:24,color:'#BA68C8',abbr:'DJ'}};
+const ABSENCES={sick:{id:'sick',name:'Baja médica',color:'#E57373'},vacation:{id:'vacation',name:'Vacaciones',color:'#FFF176'},permission:{id:'permission',name:'Permiso',color:'#F48FB1'},paternity:{id:'paternity',name:'Paternidad',color:'#90CAF9'},swap:{id:'swap',name:'Cambio solicitado',color:'#4DD0E1'}};
+const COVERAGE_MIN={morning:3,tarde:3,mid:0};
+
+// Festivos Bilbao 2026 (se trabaja pero se resalta)
+const HOLIDAYS={
+'2026-01-01':'Año Nuevo','2026-01-06':'Reyes','2026-03-19':'San José',
+'2026-04-02':'Jueves Santo','2026-04-03':'Viernes Santo','2026-04-06':'Lunes Pascua',
+'2026-05-01':'Día del Trabajo','2026-07-25':'Santiago Apóstol',
+'2026-07-31':'San Ignacio','2026-08-15':'Asunción','2026-08-28':'Semana Grande',
+'2026-10-12':'Fiesta Nacional','2026-12-08':'Inmaculada','2026-12-25':'Navidad',
+};
+function isHoliday(d){return HOLIDAYS[fmtDate(d)]||null}
+const ANNUAL_HOURS=1698;
+const ANNUAL_VACATION=22;
+const DAYS=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+
+function getShiftHours(type){if(!SHIFTS[type])return 0;return SHIFTS[type].end-SHIFTS[type].start}
+
+let employees = [
+  { id:'jesus',    name:'Jesús',    restrictions:[], preferences:[], notes:'26h/sem: Vie 15-00, Sáb 12-20, Dom 15-00' },
+  { id:'maca',     name:'Maca',     restrictions:[], preferences:[], notes:'' },
+  { id:'edus',     name:'Edu S.',   restrictions:[], preferences:[], notes:'' },
+  { id:'asier',    name:'Asier',    restrictions:[], preferences:[], notes:'' },
+  { id:'martin',   name:'Martín',   restrictions:[], preferences:[], notes:'Paternidad desde 27/04' },
+  { id:'leti',     name:'Leti',     restrictions:[], preferences:[], notes:'' },
+  { id:'gerardo',  name:'Gerardo',  restrictions:[], preferences:[], notes:'' },
+  { id:'jon',      name:'Jon',      restrictions:[], preferences:[], notes:'' },
+  { id:'alaitz',   name:'Alaitz',   restrictions:['closing'], preferences:['morning'], notes:'No puede hacer Cierre' },
+  { id:'patricia', name:'Patricia', restrictions:[], preferences:['mid'], notes:'Preferencia franja central' },
+  { id:'edu',      name:'Edu',      restrictions:[], preferences:['afternoon','closing'], notes:'Perfil tarde/cierre' },
+  { id:'mertxe',   name:'Mertxe',   restrictions:[], preferences:[], notes:'' },
+  { id:'ainara',   name:'Ainara',   restrictions:[], preferences:[], notes:'Suple a Martín. L-V máx 22:00 (14-22). Fines de semana turno normal.' },
+  { id:'leire',    name:'Leire',    restrictions:[], preferences:[], notes:'Desde 1 mayo 2026' },
+  { id:'inigo',    name:'Iñigo',    restrictions:[], preferences:[], notes:'Cobertura Jun-Sep 2026' },
+  { id:'rocio',    name:'Rocío',    restrictions:[], preferences:[], notes:'Cobertura Jun-Sep 2026' },
+  { id:'alaba1',   name:'Alaba1',   restrictions:[], preferences:[], notes:'Refuerzo desde 29/Jun (relevo de Ángel)' },
+  { id:'alaba2',   name:'Alaba2',   restrictions:[], preferences:[], notes:'Refuerzo desde 29/Jun (relevo de Ángel)' },
+  { id:'alejandro',name:'Alejandro',restrictions:[], preferences:[], notes:'Refuerzo Mar-May 2026' },
+  { id:'laura',    name:'Laura',    restrictions:[], preferences:[], notes:'Refuerzo Mar-May 2026' },
+  { id:'angel',    name:'Ángel',    restrictions:[], preferences:[], notes:'Refuerzo Mar-Jun 2026' },
+  { id:'nathalia', name:'Nathalia', restrictions:[], preferences:[], notes:'Refuerzo Mar-May 2026' },
+  { id:'patricia_g',name:'Patricia G.',restrictions:[], preferences:[], notes:'Refuerzo Mar-Abr 2026' }
+];
+
+const ROTATION={jesus:[[null,null,null,null,'jesus_fri','jesus_sat','jesus_sun'],[null,null,null,null,'jesus_fri','jesus_sat','jesus_sun'],[null,null,null,null,'jesus_fri','jesus_sat','jesus_sun'],[null,null,null,null,'jesus_fri','jesus_sat','jesus_sun']],maca:[['morning','morning',null,null,'morning','morning','morning'],['afternoon',null,'morning','morning','morning',null,null],['afternoon','closing',null,null,'mid','closing','afternoon'],['closing',null,'afternoon','mid','morning',null,null]],edus:[['afternoon','closing',null,null,'mid','closing','afternoon'],[null,'morning','morning','morning','morning',null,null],['afternoon','closing','afternoon',null,null,'morning','morning'],[null,'morning','morning','morning','morning',null,null]],asier:[[null,'morning','morning','morning','morning',null,null],['morning','afternoon','mid',null,null,'morning','morning'],[null,'morning','afternoon','closing','afternoon',null,null],['afternoon','afternoon','mid',null,null,'closing','afternoon']],martin:[[null,'afternoon','afternoon','mid','morning',null,null],['afternoon','closing','closing',null,null,'morning','morning'],[null,'morning','morning','mid','morning',null,null],['mid','morning','morning',null,null,'afternoon','closing']],leti:[['morning',null,null,'afternoon','afternoon','afternoon','closing'],[null,'morning','mid','mid','closing',null,null],['morning',null,null,'morning','morning','morning','morning'],[null,'morning','afternoon','afternoon','afternoon',null,null]],gerardo:[['morning','afternoon','closing',null,null,'morning','morning'],[null,'morning','morning','closing','afternoon',null,null],['morning','afternoon','mid',null,null,'afternoon','afternoon'],[null,'morning','morning','closing','afternoon',null,null]],jon:[['closing',null,'afternoon','afternoon','mid',null,null],['morning',null,null,'morning','afternoon','afternoon','closing'],['mid',null,'morning','afternoon','closing',null,null],['morning','morning',null,null,'morning','morning','morning']],alaitz:[[null,'morning','morning','morning','morning',null,null],['afternoon','mid',null,null,'morning','afternoon','afternoon'],['afternoon','mid',null,'morning','morning',null,null],['morning',null,null,'morning','morning','morning','morning']],patricia:[['mid','mid','morning',null,null,'closing','afternoon'],[null,'morning','mid','morning','morning',null,null],['mid','morning','mid',null,null,'morning','morning'],[null,'afternoon','mid','morning','morning',null,null]],edu:[['afternoon','closing','afternoon',null,null,'morning','morning'],['mid',null,'afternoon','afternoon','mid',null,null],['closing','afternoon','mid',null,null,'afternoon','closing'],[null,'closing','closing','afternoon','mid',null,null]],mertxe:[[null,'morning','morning','closing','afternoon',null,null],['closing',null,null,'afternoon','mid','morning','morning'],['morning',null,'morning','morning','morning',null,null],['afternoon','mid',null,null,'closing','afternoon','afternoon']],ainara:[[null,'afternoon_14_22','afternoon_14_22','mid','morning',null,null],['afternoon_14_22','afternoon_14_22','afternoon_14_22',null,null,'morning','morning'],[null,'morning','morning','mid','morning',null,null],['mid','morning','morning',null,null,'afternoon','closing']],leire:[['afternoon',null,'morning','morning','morning',null,null],['morning','morning',null,null,'afternoon','mid','morning'],[null,'afternoon','closing','mid','mid',null,null],['morning',null,null,'afternoon','afternoon','afternoon','closing']],inigo:[['morning','afternoon',null,null,'morning','afternoon','afternoon'],[null,'morning','morning','afternoon','closing',null,null],['afternoon','mid',null,null,'morning','morning','morning'],[null,'closing','afternoon','mid','morning',null,null]],rocio:[[null,'morning','afternoon','afternoon','mid',null,null],['morning','morning',null,null,'morning','closing','afternoon'],['mid',null,'morning','afternoon','afternoon',null,null],[null,'afternoon','mid',null,null,'morning','morning']],alaba1:[['afternoon',null,null,'morning','morning','morning','morning'],[null,'afternoon','afternoon',null,null,'morning','morning'],[null,'morning','afternoon',null,null,'morning','morning'],['morning',null,'morning','morning',null,'morning','morning']],alaba2:[[null,'afternoon','afternoon',null,null,'afternoon','mid'],['morning',null,null,'afternoon','afternoon','afternoon','afternoon'],['afternoon','afternoon',null,null,'morning','morning','morning'],['morning','morning',null,null,'afternoon',null,null]]};
+
+let state={assignments:{},absences:[],swapRequests:[],changelog:[],dayDebts:[],dismissedAlerts:new Set(),dismissedDebts:new Set(),taskAssigns:{},nominaEntries:[],currentWeekStart:getMonday(new Date()),closedDays:['12-25','01-01']};
+
+// ===================== DATE UTILS =====================
+function getMonday(d){d=new Date(d);const day=d.getDay();d.setDate(d.getDate()-day+(day===0?-6:1));return d}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r}
+function fmtDate(d){return d.toISOString().split('T')[0]}
+function fmtShort(d){return d.getDate()+'/'+(d.getMonth()+1)}
+function weekDates(m){return Array.from({length:7},(_,i)=>addDays(m,i))}
+function cycleWeek(d){const ref=new Date(2025,0,6);return(((Math.floor((d-ref)/864e5/7)%4)+4)%4)}
+function isClosed(d){const mm=String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return state.closedDays.includes(mm)}
+
+// ===================== WORK PATTERN HELPERS =====================
+function isWorkDay(d,eid){const a=getAssign(d,eid);return a.type&&SHIFTS[a.type]}
+function getWeekFreeDays(d,eid){const m=getMonday(d);let f=0;for(let i=0;i<7;i++)if(!isWorkDay(addDays(m,i),eid))f++;return f}
+function getConsecutiveIfAssigned(d,eid){let c=1,b=1;while(b<14){if(isWorkDay(addDays(d,-b),eid)){c++;b++}else break}let f=1;while(f<14){if(isWorkDay(addDays(d,f),eid)){c++;f++}else break}return c}
+function getConsecutiveWorkDays(d,eid){if(!isWorkDay(d,eid))return 0;let c=1,b=1;while(b<14){if(isWorkDay(addDays(d,-b),eid)){c++;b++}else break}let f=1;while(f<14){if(isWorkDay(addDays(d,f),eid)){c++;f++}else break}return c}
+function getActiveDebts(eid){return state.dayDebts.filter(d=>d.employee_id===eid&&!d.resolved)}
+function getSwapCountThisYear(eid){const y=String(new Date().getFullYear());return state.swapRequests.filter(s=>s.requester_id===eid&&s.created_at&&s.created_at.startsWith(y)).length}
+
+// Annual stats cache (recalculated per render cycle)
+let _annualCache={};let _annualCacheKey='';
+function getAnnualStats(eid){
+  const ck=fmtDate(state.currentWeekStart);
+  if(_annualCacheKey!==ck)_annualCache={};_annualCacheKey=ck;
+  if(_annualCache[eid])return _annualCache[eid];
+  
+  const year=2026;
+  let totalHours=0,workDays=0,vacDays=0,sickDays=0,patDays=0,permDays=0;
+  let d=new Date(year+'-01-01T12:00:00');
+  const end=new Date(year+'-12-31T12:00:00');
+  
+  while(d<=end){
+    if(!isClosed(d)){
+      const a=getAssign(d,eid);
+      if(a.type&&SHIFTS[a.type]){
+        totalHours+=getShiftHours(a.type);
+        workDays++;
+      } else if(a.type==='vacation'){
+        vacDays++;
+      } else if(a.type==='sick'){
+        sickDays++;
+      } else if(a.type==='paternity'){
+        patDays++;
+      } else if(a.type==='permission'){
+        permDays++;
+      }
+    }
+    d=addDays(d,1);
+  }
+  
+  const hoursRemaining=ANNUAL_HOURS-totalHours;
+  const vacRemaining=ANNUAL_VACATION-vacDays;
+  const hoursPct=Math.min(Math.round(totalHours/ANNUAL_HOURS*100),100);
+  const vacPct=Math.min(Math.round(vacDays/ANNUAL_VACATION*100),100);
+  
+  const result={totalHours,workDays,vacDays,sickDays,patDays,permDays,hoursRemaining,vacRemaining,hoursPct,vacPct};
+  _annualCache[eid]=result;
+  return result;
+}
+function getPendingSwaps(){return state.swapRequests.filter(s=>s.status==='pending')}
+
+// ===================== ASSIGNMENTS =====================
+// Employee availability windows (null = no limit)
+const AVAIL={ainara:['2026-05-01',null],leire:['2026-05-01',null],inigo:['2026-06-01','2026-09-30'],rocio:['2026-06-01','2026-09-30'],alaba1:['2026-06-29','2026-12-31'],alaba2:['2026-06-29','2026-12-31'],alejandro:['2026-03-23','2026-05-10'],laura:['2026-03-23','2026-05-24'],angel:['2026-03-23','2026-06-28'],nathalia:['2026-03-25','2026-05-03'],patricia_g:['2026-03-23','2026-04-26']};
+// Hardcoded absences (paternity/vacation - also synced to DB)
+const HARD_ABS=[
+  // Paternidades
+  {employee_id:'martin',type:'paternity',start_date:'2026-04-27',end_date:'2026-08-16'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-08-17',end_date:'2026-08-30'},
+  {employee_id:'edus',type:'paternity',start_date:'2026-07-27',end_date:'2026-09-06'},
+  // Vacaciones
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-06-29',end_date:'2026-06-30'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-07-03',end_date:'2026-07-10'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-07-13',end_date:'2026-07-13'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-07-16',end_date:'2026-07-19'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-08-31',end_date:'2026-09-04'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-12-28',end_date:'2026-12-28'},
+  {employee_id:'alaitz',type:'vacation',start_date:'2026-12-31',end_date:'2027-01-02'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-02-14',end_date:'2026-02-15'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-05-12',end_date:'2026-05-15'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-08-31',end_date:'2026-09-04'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-09-07',end_date:'2026-09-09'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-09-12',end_date:'2026-09-13'},
+  {employee_id:'asier',type:'vacation',start_date:'2026-11-24',end_date:'2026-11-27'},
+  {employee_id:'edu',type:'vacation',start_date:'2026-05-25',end_date:'2026-05-27'},
+  {employee_id:'edu',type:'vacation',start_date:'2026-05-30',end_date:'2026-05-31'},
+  {employee_id:'edu',type:'vacation',start_date:'2026-06-22',end_date:'2026-06-24'},
+  {employee_id:'edu',type:'vacation',start_date:'2026-06-27',end_date:'2026-07-03'},
+  {employee_id:'edus',type:'vacation',start_date:'2026-06-12',end_date:'2026-06-12'},
+  {employee_id:'edus',type:'vacation',start_date:'2026-07-01',end_date:'2026-07-03'},
+  {employee_id:'edus',type:'vacation',start_date:'2026-07-06',end_date:'2026-07-08'},
+  {employee_id:'edus',type:'vacation',start_date:'2026-07-11',end_date:'2026-07-12'},
+  {employee_id:'inigo',type:'vacation',start_date:'2026-07-13',end_date:'2026-08-09'},
+  {employee_id:'jesus',type:'vacation',start_date:'2026-02-04',end_date:'2026-02-06'},
+  {employee_id:'jesus',type:'vacation',start_date:'2026-03-09',end_date:'2026-03-11'},
+  {employee_id:'jesus',type:'vacation',start_date:'2026-06-20',end_date:'2026-06-26'},
+  {employee_id:'jesus',type:'vacation',start_date:'2026-07-17',end_date:'2026-07-18'},
+  {employee_id:'jesus',type:'vacation',start_date:'2026-08-17',end_date:'2026-08-21'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-04-27',end_date:'2026-04-27'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-05-01',end_date:'2026-05-01'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-06-15',end_date:'2026-06-16'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-06-19',end_date:'2026-06-22'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-07-27',end_date:'2026-07-27'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-08-10',end_date:'2026-08-11'},
+  {employee_id:'jon',type:'vacation',start_date:'2026-08-14',end_date:'2026-08-21'},
+  {employee_id:'leire',type:'vacation',start_date:'2026-06-01',end_date:'2026-06-14'},
+  {employee_id:'leire',type:'vacation',start_date:'2026-06-29',end_date:'2026-07-12'},
+  {employee_id:'leire',type:'vacation',start_date:'2026-08-10',end_date:'2026-08-23'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-01-19',end_date:'2026-01-19'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-01-22',end_date:'2026-01-23'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-04-17',end_date:'2026-04-17'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-07-06',end_date:'2026-07-06'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-07-09',end_date:'2026-07-12'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-09-08',end_date:'2026-09-11'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-09-14',end_date:'2026-09-14'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-09-17',end_date:'2026-09-18'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-12-21',end_date:'2026-12-21'},
+  {employee_id:'leti',type:'vacation',start_date:'2026-12-24',end_date:'2026-12-24'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-03-20',end_date:'2026-03-20'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-04-03',end_date:'2026-04-05'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-05-06',end_date:'2026-05-06'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-07-27',end_date:'2026-07-31'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-08-03',end_date:'2026-08-04'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-08-07',end_date:'2026-08-10'},
+  {employee_id:'maca',type:'vacation',start_date:'2026-12-26',end_date:'2026-12-31'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-04-07',end_date:'2026-04-08'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-04-11',end_date:'2026-04-12'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-12-09',end_date:'2026-12-11'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-12-14',end_date:'2026-12-16'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-12-19',end_date:'2026-12-24'},
+  {employee_id:'martin',type:'vacation',start_date:'2026-12-28',end_date:'2026-12-30'},
+  {employee_id:'martin',type:'vacation',start_date:'2027-01-02',end_date:'2027-01-02'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-05-04',end_date:'2026-05-04'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-05-14',end_date:'2026-05-15'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-06-01',end_date:'2026-06-01'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-06-29',end_date:'2026-06-29'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-07-27',end_date:'2026-07-27'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-08-24',end_date:'2026-08-24'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-09-21',end_date:'2026-09-21'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-10-19',end_date:'2026-10-19'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-11-16',end_date:'2026-11-16'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-11-19',end_date:'2026-11-27'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-11-30',end_date:'2026-12-01'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-12-04',end_date:'2026-12-06'},
+  {employee_id:'mertxe',type:'vacation',start_date:'2026-12-28',end_date:'2026-12-29'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-03-25',end_date:'2026-03-27'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-07-28',end_date:'2026-07-31'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-09-08',end_date:'2026-09-11'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-09-14',end_date:'2026-09-16'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-09-19',end_date:'2026-09-20'},
+  {employee_id:'patricia',type:'vacation',start_date:'2026-12-26',end_date:'2026-12-31'},
+  {employee_id:'rocio',type:'vacation',start_date:'2026-06-29',end_date:'2026-07-11'},
+  {employee_id:'rocio',type:'vacation',start_date:'2026-07-14',end_date:'2026-07-26'},
+  {employee_id:'rocio',type:'vacation',start_date:'2026-09-21',end_date:'2026-10-04'}
+];
+
+function aKey(d,eid){return fmtDate(d)+'_'+eid}
+// Pre-computed coverage fixes (VALIDATED: 0 Jesus weekday violations, 58 entries)
+const PRE_ASSIGN={
+'2026-04-07_jon':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-04-08_alaitz':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-04-16_maca':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-05_jon':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-06_alaitz':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-09_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-12_leti':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-05-13_laura':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-14_edu':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-14_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-14_maca':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-05-15_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-05-23_patricia':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-05-24_maca':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-05-30_jon':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-05-31_jon':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-06-29_alaba1':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-01_alaitz':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-03_asier':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-04_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-06_alaba1':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-08_inigo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-09_edus':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-09_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-09_maca':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-18_edus':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-19_maca':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-27_patricia':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-07-29_alaitz':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-29_jon':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-30_alaba1':{type:'mid',modified:true,reason:'Cobertura'},
+'2026-07-30_asier':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-30_leire':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-07-31_alaba1':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-08-08_jon':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-08-10_inigo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-08-17_alaba2':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-08-21_alaba2':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-09-02_inigo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-09-02_leti':{type:'mid',modified:true,reason:'Cobertura'},
+'2026-09-03_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-09-03_maca':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-09-03_patricia':{type:'mid',modified:true,reason:'Cobertura'},
+'2026-09-18_patricia':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-09-26_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-10-01_maca':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-10-29_maca':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-11-23_asier':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-11-26_alaba1':{type:'mid',modified:true,reason:'Cobertura'},
+'2026-11-26_maca':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-11-26_patricia':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-11-27_gerardo':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-12-21_alaba1':{type:'morning',modified:true,reason:'Cobertura'},
+'2026-12-24_maca':{type:'mid',modified:true,reason:'Cobertura'},
+'2026-12-26_asier':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-12-29_alaitz':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-12-30_jon':{type:'afternoon',modified:true,reason:'Cobertura'},
+'2026-12-31_asier':{type:'mid',modified:true,reason:'Cobertura'},
+};
+
+// Fixed date-based schedules for temporary employees (no rotation cycle)
+const FIXED_SCHEDULES={
+alejandro:{'2026-03-23':'closing','2026-03-25':'afternoon','2026-03-26':'mid','2026-03-27':'morning','2026-03-30':'morning','2026-04-02':'mid','2026-04-03':'morning','2026-04-07':'morning','2026-04-08':'morning','2026-04-09':'mid','2026-04-10':'morning','2026-04-13':'afternoon','2026-04-14':'closing','2026-04-17':'mid','2026-04-18':'morning','2026-04-19':'morning','2026-04-20':'closing','2026-04-22':'afternoon','2026-04-23':'mid','2026-04-24':'morning','2026-04-27':'morning','2026-04-30':'mid','2026-05-01':'morning','2026-05-02':'morning','2026-05-03':'morning','2026-05-05':'morning','2026-05-06':'morning','2026-05-07':'mid','2026-05-08':'morning'},
+laura:{'2026-03-23':'closing','2026-03-25':'afternoon','2026-03-26':'mid','2026-03-27':'morning','2026-03-30':'morning','2026-04-02':'mid','2026-04-03':'morning','2026-04-04':'morning','2026-04-05':'morning','2026-04-07':'morning','2026-04-08':'morning','2026-04-09':'mid','2026-04-10':'morning','2026-04-13':'afternoon','2026-04-14':'closing','2026-04-15':'mid','2026-04-16':'morning','2026-04-19':'morning','2026-04-20':'closing','2026-04-22':'afternoon','2026-04-23':'mid','2026-04-24':'morning','2026-04-27':'morning','2026-04-30':'mid','2026-05-01':'morning','2026-05-02':'morning','2026-05-03':'morning','2026-05-05':'morning','2026-05-06':'morning','2026-05-07':'mid','2026-05-08':'morning','2026-05-11':'afternoon','2026-05-12':'closing','2026-05-15':'mid','2026-05-16':'mid','2026-05-17':'mid','2026-05-18':'closing','2026-05-20':'afternoon','2026-05-21':'mid','2026-05-22':'morning'},
+angel:{'2026-03-23':'morning','2026-03-24':'afternoon','2026-03-25':'mid','2026-03-28':'mid','2026-03-29':'mid','2026-03-31':'morning','2026-04-01':'morning','2026-04-02':'morning','2026-04-03':'morning','2026-04-06':'mid','2026-04-07':'mid','2026-04-08':'mid','2026-04-11':'mid','2026-04-12':'mid','2026-04-13':'morning','2026-04-15':'morning','2026-04-16':'morning','2026-04-17':'morning','2026-04-20':'afternoon','2026-04-21':'afternoon','2026-04-22':'mid','2026-04-25':'mid','2026-04-26':'mid','2026-04-28':'morning','2026-04-29':'morning','2026-04-30':'morning','2026-05-01':'morning','2026-05-04':'mid','2026-05-05':'mid','2026-05-06':'mid','2026-05-09':'mid','2026-05-10':'mid','2026-05-11':'morning','2026-05-13':'morning','2026-05-14':'morning','2026-05-15':'morning','2026-05-18':'afternoon','2026-05-19':'afternoon','2026-05-20':'mid','2026-05-21':'mid','2026-05-22':'mid','2026-05-25':'morning','2026-05-28':'mid','2026-05-29':'morning','2026-05-30':'morning','2026-05-31':'morning','2026-06-02':'morning','2026-06-03':'morning','2026-06-04':'mid','2026-06-05':'morning','2026-06-08':'afternoon','2026-06-09':'closing','2026-06-12':'mid','2026-06-13':'morning','2026-06-14':'morning','2026-06-15':'closing','2026-06-17':'afternoon','2026-06-18':'mid','2026-06-19':'morning','2026-06-22':'morning','2026-06-25':'mid','2026-06-26':'morning','2026-06-27':'morning','2026-06-28':'morning'},
+nathalia:{'2026-03-25':'morning','2026-03-26':'morning','2026-03-27':'morning','2026-03-28':'morning','2026-03-29':'morning','2026-03-30':'morning','2026-03-31':'morning','2026-04-04':'closing','2026-04-05':'closing','2026-04-06':'afternoon','2026-04-07':'afternoon','2026-04-08':'afternoon','2026-04-09':'afternoon','2026-04-10':'afternoon','2026-04-13':'morning','2026-04-14':'morning','2026-04-15':'morning','2026-04-19':'morning','2026-04-20':'morning','2026-04-21':'morning','2026-04-25':'closing','2026-04-26':'closing','2026-04-27':'afternoon','2026-04-28':'afternoon','2026-04-29':'afternoon','2026-04-30':'afternoon'},
+patricia_g:{'2026-03-23':'morning','2026-03-24':'morning','2026-03-25':'mid','2026-03-28':'afternoon_14_22','2026-03-29':'afternoon_14_22','2026-03-31':'morning','2026-04-01':'morning','2026-04-02':'afternoon_14_22','2026-04-03':'afternoon_14_22','2026-04-06':'morning','2026-04-09':'morning','2026-04-10':'morning','2026-04-11':'morning','2026-04-12':'morning','2026-04-14':'morning','2026-04-15':'morning','2026-04-16':'afternoon_14_22','2026-04-17':'afternoon_14_22','2026-04-20':'morning','2026-04-21':'morning','2026-04-24':'mid','2026-04-25':'mid','2026-04-26':'mid'},
+};
+
+function getAssign(d,eid){
+  const k=aKey(d,eid);if(state.assignments[k])return state.assignments[k];
+  const abs=getAbsence(d,eid);if(abs)return{type:abs.type,isAbsence:true};
+  const ds=fmtDate(d);
+  const ha=HARD_ABS.find(a=>a.employee_id===eid&&a.start_date<=ds&&a.end_date>=ds);
+  if(ha)return{type:ha.type,isAbsence:true};
+  if(AVAIL[eid]){const[s,e]=AVAIL[eid];if(s&&ds<s)return{type:'inactive'};if(e&&ds>e)return{type:'inactive'}}
+  if(isClosed(d))return{type:'closed'};
+  if(PRE_ASSIGN[k])return PRE_ASSIGN[k];
+  // Fixed schedules (non-rotating employees)
+  if(FIXED_SCHEDULES[eid]){const fs=FIXED_SCHEDULES[eid][ds];return{type:fs||'free',fromRotation:true}}
+  const cw=cycleWeek(d),dow=(d.getDay()+6)%7;
+  if(ROTATION[eid]){const s=ROTATION[eid][cw][dow];return{type:s||'free',fromRotation:true}}
+  return{type:'free'}
+}
+function getAbsence(d,eid){const ds=fmtDate(d);return state.absences.find(a=>a.employee_id===eid&&a.start_date<=ds&&(!a.end_date||a.end_date>=ds)&&a.status==='approved')}
+
+async function setAssign(d,eid,shiftType,reason=''){
+  const prev=getAssign(d,eid);
+  state.assignments[aKey(d,eid)]={type:shiftType,modified:true,reason};
+  checkAndCreateDebt(d,eid);
+  addLog(eid,fmtDate(d),prev.type,shiftType,reason||'Cambio manual');
+  renderAll();showToast('Turno actualizado: '+employees.find(e=>e.id===eid).name,'success');
+  await dbSaveAssignment(d,eid,shiftType,reason);
+}
+
+// ===================== DEBT MANAGEMENT =====================
+async function checkAndCreateDebt(d,eid){
+  const m=getMonday(d),ws=fmtDate(m);let wd=0;
+  for(let i=0;i<7;i++)if(isWorkDay(addDays(m,i),eid))wd++;
+  if(wd>=6){
+    const existing=state.dayDebts.find(db=>db.employee_id===eid&&db.week_str===ws&&!db.resolved);
+    if(!existing){
+      const debt={id:crypto.randomUUID(),employee_id:eid,owed_since:fmtDate(d),week_str:ws,reason:`${employees.find(e=>e.id===eid).name} trabajó ${wd} días (sem ${fmtShort(m)})`,resolved:false,resolved_date:null};
+      state.dayDebts.push(debt);
+      await dbSaveDebt(debt);
+    }
+  }
+}
+// Auto-detect debts from current week's rotation (runs on render)
+function detectWeekDebts(){
+  const dates=weekDates(state.currentWeekStart),ws=fmtDate(dates[0]);
+  for(const emp of employees){
+    let wd=0;for(let i=0;i<7;i++)if(isWorkDay(dates[i],emp.id))wd++;
+    if(wd>=6){
+      const debtId='auto_'+ws+'_'+emp.id;
+      // Skip if dismissed or already exists
+      if(state.dismissedDebts.has(debtId))continue;
+      const anyExisting=state.dayDebts.find(db=>db.employee_id===emp.id&&db.week_str===ws);
+      if(!anyExisting){
+        const debt={id:debtId,employee_id:emp.id,owed_since:ws,week_str:ws,reason:`${emp.name} trabaja ${wd} días (sem ${fmtShort(dates[0])})`,resolved:false,resolved_date:null,auto:true};
+        state.dayDebts.push(debt);
+      }
+    }
+  }
+}
+async function resolveDebt(id){
+  const d=state.dayDebts.find(x=>x.id===id);if(!d)return;
+  d.resolved=true;d.resolved_date=fmtDate(new Date());
+  state.dismissedDebts.add(id);
+  // Remove from array entirely so it doesn't show up
+  state.dayDebts=state.dayDebts.filter(x=>x.id!==id);
+  if(!d.auto)await db.from('day_debts').update({resolved:true,resolved_date:d.resolved_date}).eq('id',id);
+  renderAll();showToast('Deuda compensada ✓','success');
+}
+function findBestDayToReturn(eid){
+  const results=[];const t=new Date();const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];const midSh=['mid','jesus_sat'];
+  for(let i=1;i<=42;i++){
+    const d=addDays(t,i);if(isClosed(d))continue;
+    const a=getAssign(d,eid);if(!a.type||!SHIFTS[a.type])continue;
+    const{counts}=getDayCoverage(d);
+    const sg=tardeSh.includes(a.type)?'tarde':midSh.includes(a.type)?'mid':'morning';
+    const mn=COVERAGE_MIN[sg]||0;
+    const excess=counts[sg]-mn;
+    if(excess>0){
+      // Verify freeing this day doesn't violate anything for this employee
+      // Just needs excess coverage > 0
+      results.push({date:d,shift:a.type,shiftName:SHIFTS[a.type].name,dayIdx:(d.getDay()+6)%7,excess,group:sg});
+    }
+    if(results.length>=5)break;
+  }
+  return results;
+}
+
+// ===================== COVERAGE =====================
+function getDayCoverage(d){const c={morning:0,mid:0,afternoon:0},n={morning:[],mid:[],afternoon:[]};const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];const midSh=['mid','jesus_sat'];for(const e of employees){const a=getAssign(d,e.id);if(a.type&&SHIFTS[a.type]){const t=a.type;if(t==='morning'){c.morning++;n.morning.push(e.name)}else if(midSh.includes(t)){c.mid++;n.mid.push(e.name)}else if(tardeSh.includes(t)){c.afternoon++;n.afternoon.push(e.name)}}}c.tarde=c.afternoon;n.tarde=n.afternoon;return{counts:c,names:n}}
+function getCoverageStatus(d){const{counts}=getDayCoverage(d);const issues=[];if(counts.morning<COVERAGE_MIN.morning)issues.push({shift:'morning',have:counts.morning,need:COVERAGE_MIN.morning});if(counts.tarde<COVERAGE_MIN.tarde)issues.push({shift:'tarde',have:counts.tarde,need:COVERAGE_MIN.tarde});return{counts,issues,ok:issues.length===0}}
+
+// ===================== VALIDATION =====================
+function validate(d,eid,ns){
+  const al=[],emp=employees.find(e=>e.id===eid);if(!emp||!ns||ns==='free'||!SHIFTS[ns])return al;
+  if(emp.restrictions.includes(ns))al.push({type:'block',msg:`${emp.name} tiene restricción de ${SHIFTS[ns].name}`});
+  if(getAbsence(d,eid))al.push({type:'block',msg:`${emp.name} tiene ausencia activa`});
+  if(isClosed(d))al.push({type:'block',msg:'Día cerrado'});
+  const prev=getAssign(addDays(d,-1),eid);if(prev.type&&SHIFTS[prev.type]){const r=(24-SHIFTS[prev.type].end)+SHIFTS[ns].start;if(r<12)al.push({type:'error',msg:`Descanso insuficiente: ${r}h entre ${SHIFTS[prev.type].name} y ${SHIFTS[ns].name} (mín 12h)`})}
+  const next=getAssign(addDays(d,1),eid);if(next.type&&SHIFTS[next.type]){const r=(24-SHIFTS[ns].end)+SHIFTS[next.type].start;if(r<12)al.push({type:'error',msg:`Descanso insuficiente con día siguiente: ${r}h hasta ${SHIFTS[next.type].name} (mín 12h)`})}
+  const con=getConsecutiveIfAssigned(d,eid);if(con>6)al.push({type:'block',msg:`${emp.name} llevaría ${con} días consecutivos (máx 6)`});else if(con===6)al.push({type:'error',msg:`⚠ ${emp.name} llevaría 6 días consecutivos`});
+  const m=getMonday(d);let wwd=0;for(let i=0;i<7;i++){const wd=addDays(m,i);if(fmtDate(wd)===fmtDate(d)){wwd++;continue}if(isWorkDay(wd,eid))wwd++}const wf=7-wwd;
+  if(wf<2)al.push({type:'error',msg:`${emp.name} solo tendría ${wf} día${wf!==1?'s':''} libre${wf!==1?'s':''} esta semana. Se generará deuda.`});
+  return al
+}
+
+// ===================== SUBSTITUTION ENGINE =====================
+function findCandidates(d,sn){
+  const c=[];for(const emp of employees){
+    const a=getAssign(d,emp.id);if(a.type!=='free')continue;if(emp.restrictions.includes(sn))continue;
+    const v=validate(d,emp.id,sn);if(v.some(x=>x.type==='block'))continue;const he=v.some(x=>x.type==='error');
+    const m=getMonday(d);let wh=0,wwd=0;for(let i=0;i<7;i++){const wa=getAssign(addDays(m,i),emp.id);if(wa.type&&SHIFTS[wa.type]){wh+=8;wwd++}}
+    const con=getConsecutiveIfAssigned(d,emp.id),ex5=(wwd+1)>5,hd=getActiveDebts(emp.id).length>0;
+    let sc=wh;if(ex5)sc+=200;if(hd)sc+=150;if(he)sc+=100;if(con>=5)sc+=80;
+    c.push({employee:emp,weekHours:wh,weekWorkDays:wwd,consecutive:con,wouldExceed5days:ex5,hasDebt:hd,hasRestWarning:he,score:sc})
+  }c.sort((a,b)=>a.score-b.score);return c
+}
+function findSwapCandidates(d,sn){
+  const c=[],cov=getDayCoverage(d);for(const emp of employees){
+    const a=getAssign(d,emp.id);if(!a.type||!SHIFTS[a.type]||a.type===sn||a.isAbsence)continue;if(emp.restrictions.includes(sn))continue;
+    const cs=a.type;const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];const midSh=['mid','jesus_sat'];const cg=tardeSh.includes(cs)?'tarde':midSh.includes(cs)?'mid':'morning';const cm=COVERAGE_MIN[cg]||0;if(cov.counts[cg]<=cm)continue;
+    const v=validate(d,emp.id,sn);if(v.some(x=>x.type==='block'))continue;
+    c.push({employee:emp,currentShift:cs,hasRestWarning:v.some(x=>x.type==='error')})
+  }return c
+}
+
+// ===================== CHANGELOG =====================
+async function addLog(eid,date,from,to,reason){
+  const entry={ts:new Date().toISOString(),employee_id:eid,date,from_val:from,to_val:to,reason,user_name:currentUser?.display_name||''};
+  state.changelog.unshift(entry);
+  await db.from('changelog').insert(entry);
+}
+
+// ===================== THEME =====================
+function toggleTheme(){
+  const root=document.documentElement;
+  const isLight=root.classList.toggle('light');
+  document.getElementById('themeBtn').textContent=isLight?'☀️':'🌙';
+  try{localStorage.setItem('sac-theme',isLight?'light':'dark')}catch(e){}
+}
+(function(){try{if(localStorage.getItem('sac-theme')==='light'){document.documentElement.classList.add('light');}}catch(e){}})();
+
+async function refreshData(){
+  const btn=document.getElementById('refreshBtn');
+  btn.style.animation='spin .6s linear';
+  state.assignments={};state.absences=[];state.swapRequests=[];state.taskAssigns={};state.nominaEntries=[];
+  await loadFromDB();
+  const active=document.querySelector('.tab.active');
+  const panel=active?.getAttribute('onclick')?.match(/'(\w+)'/)?.[1]||'home';
+  if(panel==='home')renderHome();
+  else if(panel==='calendar')renderCalendar();
+  else if(panel==='team')renderTeam();
+  else if(panel==='nomina')renderNomina();
+  else if(panel==='swap')renderSwap();
+  setTimeout(()=>btn.style.animation='',600);
+  showToast('✅ Datos actualizados','success');
+}
+
+// ===================== AUTH =====================
+async function doLogin(){
+  const user=document.getElementById('loginUser').value.trim(),pass=document.getElementById('loginPass').value;
+  if(!user||!pass){document.getElementById('loginError').textContent='Introduce usuario y contraseña';return}
+  
+  // Try current do_login (may or may not return employee_id)
+  const{data,error}=await db.rpc('do_login',{p_username:user,p_password:pass});
+  
+  if(error||!data||!data.length){
+    document.getElementById('loginError').textContent='Usuario o contraseña incorrectos';
+    return;
+  }
+  currentUser=data[0];
+  
+  // If employee_id comes from DB, use it
+  if(currentUser.employee_id){
+    currentEmpId=currentUser.employee_id;
+    startApp();
+    return;
+  }
+  
+  // No employee_id: check if username matches an employee id directly
+  const empMatch=employees.find(e=>e.id===user.toLowerCase());
+  if(empMatch){
+    currentEmpId=empMatch.id;
+    startApp();
+    return;
+  }
+  
+  // Admin or unlinked user: show employee picker
+  showAdminPicker();
+}
+
+function showAdminPicker(){
+  document.getElementById('loginScreen').innerHTML=`<div class="login-card">
+    <h1>Vista previa</h1>
+    <div class="sub">Admin: selecciona empleado para ver su portal</div>
+    <select id="pickEmp" style="width:100%;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;margin-bottom:12px">
+      ${employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}
+    </select>
+    <button class="login-btn" onclick="currentEmpId=document.getElementById('pickEmp').value;startApp()">Acceder como este empleado</button>
+  </div>`;
+}
+
+async function startApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  const emp=employees.find(e=>e.id===currentEmpId);
+  document.getElementById('greeting').textContent=emp?.name||currentUser.display_name;
+  document.getElementById('themeBtn').textContent=document.documentElement.classList.contains('light')?'☀️':'🌙';
+  state.currentWeekStart=getMonday(new Date());
+  await loadFromDB();
+  renderHome();
+}
+document.getElementById('loginPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('loginUser').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('loginPass').focus()});
+
+function doLogout(){currentUser=null;currentEmpId=null;document.getElementById('app').style.display='none';document.getElementById('loginScreen').style.display='flex';document.getElementById('loginUser').value='';document.getElementById('loginPass').value='';document.getElementById('loginError').textContent=''}
+
+async function loadFromDB(){
+  const{data:asg}=await db.from('assignments').select('*');
+  if(asg)for(const a of asg)state.assignments[a.date+'_'+a.employee_id]={type:a.type,modified:true,reason:a.reason||''};
+  const{data:abs}=await db.from('absences').select('*').eq('status','approved');state.absences=abs||[];
+  const{data:swaps}=await db.from('swap_requests').select('*').order('created_at',{ascending:false});state.swapRequests=swaps||[];
+  const{data:debts}=await db.from('day_debts').select('*');state.dayDebts=debts||[];
+  const{data:tasks}=await db.from('task_assignments').select('*');if(tasks)for(const t of tasks)state.taskAssigns[t.date+'_'+t.employee_id]=t.task_type;
+  try{const{data:cl}=await db.from('changelog').select('*').order('ts',{ascending:false}).limit(200);state.changelog=cl||[]}catch(e){}
+  try{const{data:nf}=await db.from('night_festive_entries').select('*').eq('employee_id',currentEmpId);state.nominaEntries=nf||[]}catch(e){state.nominaEntries=[]}
+}
+
+// ===================== TABS =====================
+function switchTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='home')renderHome();
+  if(id==='calendar')renderCalendar();
+  if(id==='team')renderTeam();
+  if(id==='nomina')renderNomina();
+  if(id==='swap')renderSwap();
+}
+
+// ===================== HELPERS =====================
+function findNextVacation(eid,fromDate){
+  // Search HARD_ABS for next vacation after fromDate
+  const ds=fmtDate(fromDate);
+  let best=null;
+  for(const abs of HARD_ABS){
+    if(abs.employee_id!==eid||abs.type!=='vacation')continue;
+    if(abs.end_date<ds)continue;
+    const start=new Date(abs.start_date+'T12:00:00');
+    const end=new Date(abs.end_date+'T12:00:00');
+    if(start>=fromDate){
+      if(!best||start<best.start)best={start,end};
+    } else if(end>=fromDate){
+      // Currently on vacation
+      best={start,end};break;
+    }
+  }
+  // Also check DB absences
+  for(const abs of state.absences){
+    if(abs.employee_id!==eid||abs.type!=='vacation')continue;
+    if(!abs.end_date||abs.end_date<ds)continue;
+    const start=new Date(abs.start_date+'T12:00:00');
+    const end=new Date(abs.end_date+'T12:00:00');
+    if(start>=fromDate&&(!best||start<best.start))best={start,end};
+  }
+  return best;
+}
+
+// ===================== HOME =====================
+function renderHome(){
+  const emp=employees.find(e=>e.id===currentEmpId);
+  if(!emp)return;
+  const ann=getAnnualStats(currentEmpId);
+  const today=new Date();today.setHours(12,0,0,0);
+  const dayOfYear=Math.floor((today-new Date(today.getFullYear(),0,1))/86400000);
+  const propTarget=Math.round(ANNUAL_HOURS*dayOfYear/365);
+  const hoursDiff=ann.totalHours-propTarget;
+  const hourCol=hoursDiff>50?'var(--warning)':hoursDiff<-50?'var(--danger)':'var(--success)';
+
+  // TODAY HERO CARD
+  const todayAssign=getAssign(today,currentEmpId);
+  const todayType=todayAssign.type;
+  const todayTask=state.taskAssigns[fmtDate(today)+'_'+currentEmpId];
+  let heroShift='Libre',heroTime='',heroBg='var(--bg3)',heroColor='var(--text3)',heroIcon='😴';
+  if(isClosed(today)){heroShift='Cerrado';heroIcon='🔒'}
+  else if(todayType==='inactive'){heroShift='No activo';heroIcon='—'}
+  else if(SHIFTS[todayType]){
+    heroShift=SHIFTS[todayType].name;heroTime=SHIFTS[todayType].time;
+    if(todayType==='morning'||todayType==='jesus_sat'){heroBg='var(--morning-bg)';heroColor='var(--morning)';heroIcon='☀️'}
+    else if(todayType==='mid'){heroBg='var(--mid-bg)';heroColor='var(--mid)';heroIcon='🌤️'}
+    else if(todayType==='closing'){heroBg='var(--closing-bg)';heroColor='var(--closing)';heroIcon='🌙'}
+    else{heroBg='var(--afternoon-bg)';heroColor='var(--afternoon)';heroIcon='🌅'}
+  }
+  else if(ABSENCES[todayType]){heroShift=ABSENCES[todayType].name;heroIcon=todayType==='vacation'?'🏖️':'🏥';heroBg='rgba(255,241,118,.08)';heroColor='var(--vacation)'}
+  const heroTask=todayTask==='medios'?'💬 Medios Escritos':'📞 Teléfono';
+  const hol=isHoliday(today);
+
+  const hour=new Date().getHours();
+  const greet=hour<12?'Buenos días':hour<20?'Buenas tardes':'Buenas noches';
+
+  let h=`<div class="card" style="background:${heroBg};border:1px solid ${heroColor}30;text-align:center;padding:24px 16px">
+    <div style="font-size:15px;color:var(--text2);margin-bottom:2px">${greet}, ${emp.name}</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${DAYS[(today.getDay()+6)%7]} ${fmtShort(today)}</div>
+    ${hol?`<div style="font-size:11px;color:var(--danger);margin-bottom:6px">🔴 ${hol}</div>`:''}
+    <div style="font-size:36px;margin-bottom:4px">${heroIcon}</div>
+    <div style="font-size:22px;font-weight:700;color:${heroColor}">${heroShift}</div>
+    ${heroTime?`<div style="font-size:28px;font-weight:700;color:var(--text);margin:4px 0">${heroTime}</div>`:''}
+    ${SHIFTS[todayType]?`<div style="font-size:13px;color:var(--text2);margin-top:4px">${heroTask}</div>`:''}
+  </div>`;
+
+  // COMPANIONS TODAY
+  if(SHIFTS[todayType]){
+    const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];
+    const midSh=['mid','jesus_sat'];
+    const myBand=tardeSh.includes(todayType)?'tarde':midSh.includes(todayType)?'mid':'morning';
+    const companions=[];
+    for(const e of employees){
+      if(e.id===currentEmpId)continue;
+      const ea=getAssign(today,e.id);
+      if(!ea.type||!SHIFTS[ea.type])continue;
+      const eBand=tardeSh.includes(ea.type)?'tarde':midSh.includes(ea.type)?'mid':'morning';
+      const overlap=myBand===eBand||(myBand==='mid')||(eBand==='mid');
+      if(overlap)companions.push({name:e.name,shift:SHIFTS[ea.type],band:eBand,task:state.taskAssigns[fmtDate(today)+'_'+e.id]});
+    }
+    if(companions.length){
+      h+=`<div class="card"><div class="card-title">👥 Hoy contigo</div>`;
+      for(const c of companions){
+        const col=c.band==='morning'?'var(--morning)':c.band==='mid'?'var(--mid)':'var(--afternoon)';
+        const taskTag=c.task==='medios'?'<span style="font-size:9px;background:rgba(99,102,241,.2);padding:1px 4px;border-radius:3px;color:var(--accent2);margin-left:4px">💬</span>':'';
+        h+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:600">${c.name}${taskTag}</span>
+          <span style="font-size:11px;color:${col}">${c.shift.time}</span>
+        </div>`;
+      }
+      h+=`</div>`;
+    }
+  }
+
+  // VACATION COUNTDOWN
+  const nextVac=findNextVacation(currentEmpId,today);
+  if(nextVac){
+    const daysUntil=Math.ceil((nextVac.start-today)/86400000);
+    const duration=Math.ceil((nextVac.end-nextVac.start)/86400000)+1;
+    h+=`<div class="card" style="display:flex;align-items:center;gap:16px;border-left:3px solid var(--vacation)">
+      <div style="font-size:32px">🏖️</div>
+      <div>
+        <div style="font-size:13px;font-weight:600">Próximas vacaciones</div>
+        <div style="font-size:22px;font-weight:700;color:var(--vacation)">${daysUntil===0?'¡Hoy empiezan!':daysUntil===1?'¡Mañana!':'En '+daysUntil+' días'}</div>
+        <div style="font-size:11px;color:var(--text3)">${fmtShort(nextVac.start)} → ${fmtShort(nextVac.end)} (${duration} día${duration>1?'s':''})</div>
+      </div>
+    </div>`;
+  }
+
+  // PENDING REQUESTS — prominent
+  const myPending=state.swapRequests.filter(s=>s.status==='pending'&&(s.requester_id===currentEmpId||s.cover_id===currentEmpId));
+  if(myPending.length){
+    h+=`<div class="card" style="border-left:3px solid var(--warning);background:rgba(245,158,11,.04)">
+      <div class="card-title" style="color:var(--warning)">⏳ Solicitudes pendientes (${myPending.length})</div>`;
+    for(const s of myPending){
+      const re=employees.find(e=>e.id===s.requester_id);
+      const ce=employees.find(e=>e.id===s.cover_id);
+      const isReq=s.requester_id===currentEmpId;
+      const sh=s.requester_shift&&SHIFTS[s.requester_shift]?SHIFTS[s.requester_shift].name:'?';
+      const isShift=s.swap_type==='shift';
+      h+=`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px">
+        <div style="font-weight:600">${isReq?'Has solicitado librarte':'Te han pedido que cubras a '+(re?.name||'?')} — ${s.date}</div>
+        <div style="color:var(--text3);font-size:11px">${isShift?'Cambio turno: '+sh:'Turno: '+sh+(ce&&!isReq?'':' · Cubre: '+(ce?.name||'?'))}${s.reason?' · '+esc(s.reason):''}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--warning);font-weight:600">⏳ Esperando aprobación de Silvia</div>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+
+  // NOTIFICATIONS — recent swap updates (approved/rejected)
+  const recentSwaps=state.swapRequests.filter(s=>(s.requester_id===currentEmpId||s.cover_id===currentEmpId)&&s.status!=='pending'&&s.resolved_at);
+  const unread=recentSwaps.filter(s=>{
+    const resolved=new Date(s.resolved_at);
+    const ago=(today-resolved)/(86400000);
+    return ago<7;
+  });
+  if(unread.length){
+    h+=`<div class="card" style="border-left:3px solid var(--accent)">
+      <div class="card-title">🔔 Novedades</div>`;
+    for(const s of unread.slice(0,5)){
+      const re=employees.find(e=>e.id===s.requester_id);
+      const ce=employees.find(e=>e.id===s.cover_id);
+      const isReq=s.requester_id===currentEmpId;
+      const statusCol=s.status==='approved'?'var(--success)':'var(--danger)';
+      const statusIcon=s.status==='approved'?'✅':'❌';
+      const statusText=s.status==='approved'?'Aprobado':'Rechazado';
+      const desc=isReq?`Tu cambio del ${s.date}`:`Cambio de ${re?.name||'?'} el ${s.date}`;
+      h+=`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">${statusIcon}</span>
+        <div><div style="font-weight:600;color:${statusCol}">${statusText}</div><div style="color:var(--text2)">${desc}</div></div>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+
+  // THIS WEEK
+  const dates=weekDates(getMonday(today));
+  h+=`<div class="card"><div class="card-title">Esta semana</div>`;
+  h+=renderWeekRows(dates,today);
+  h+=`</div>`;
+
+  // NEXT WEEK
+  const nextWeekDates=weekDates(addDays(getMonday(today),7));
+  h+=`<div class="card"><div class="card-title" style="color:var(--text3)">Semana que viene</div>`;
+  h+=renderWeekRows(nextWeekDates,today);
+  h+=`</div>`;
+
+  // Hours progress
+  h+=`<div class="card"><div class="card-title">📊 Mis horas</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+      <span>Horas trabajadas</span>
+      <span style="font-weight:700;color:${hourCol}">${ann.totalHours}h / ${ANNUAL_HOURS}h</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(ann.hoursPct,100)}%;background:${hourCol}"></div></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">${hoursDiff>=0?'+':''}${hoursDiff}h vs objetivo proporcional (${propTarget}h)</div>
+  </div>`;
+
+  // Vacation progress
+  h+=`<div class="card"><div class="card-title">🏖️ Mis vacaciones</div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px">
+      <span>Días disfrutados</span>
+      <span style="font-weight:700">${ann.vacDays} / ${ANNUAL_VACATION}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(ann.vacPct,100)}%;background:var(--vacation)"></div></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:4px">${ANNUAL_VACATION-ann.vacDays} días restantes</div>`;
+  if(ann.sickDays)h+=`<div style="font-size:11px;color:var(--sick);margin-top:4px">Baja médica: ${ann.sickDays} días</div>`;
+  if(ann.patDays)h+=`<div style="font-size:11px;color:var(--accent2);margin-top:4px">Paternidad/maternidad: ${ann.patDays} días</div>`;
+  h+=`</div>`;
+
+  // Shift distribution
+  const shifts={morning:0,mid:0,afternoon:0,closing:0};
+  let d2=new Date('2026-01-01T12:00:00');
+  while(d2<=today){
+    const a=getAssign(d2,currentEmpId);
+    if(a.type==='morning')shifts.morning++;
+    else if(a.type==='mid'||a.type==='jesus_sat')shifts.mid++;
+    else if(a.type==='afternoon'||a.type==='afternoon_14_22'||a.type==='jesus_fri'||a.type==='jesus_sun')shifts.afternoon++;
+    else if(a.type==='closing')shifts.closing++;
+    d2=addDays(d2,1);
+  }
+  const totalS=shifts.morning+shifts.mid+shifts.afternoon+shifts.closing||1;
+  h+=`<div class="card"><div class="card-title">📈 Distribución turnos</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px;background:var(--morning-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--morning)">${shifts.morning}</div><div style="font-size:10px;color:var(--text3)">Mañana (${Math.round(shifts.morning/totalS*100)}%)</div></div>
+      <div style="flex:1;min-width:100px;background:var(--mid-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--mid)">${shifts.mid}</div><div style="font-size:10px;color:var(--text3)">Medio (${Math.round(shifts.mid/totalS*100)}%)</div></div>
+      <div style="flex:1;min-width:100px;background:var(--afternoon-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--afternoon)">${shifts.afternoon}</div><div style="font-size:10px;color:var(--text3)">Tarde (${Math.round(shifts.afternoon/totalS*100)}%)</div></div>
+      <div style="flex:1;min-width:100px;background:var(--closing-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--closing)">${shifts.closing}</div><div style="font-size:10px;color:var(--text3)">Cierre (${Math.round(shifts.closing/totalS*100)}%)</div></div>
+    </div></div>`;
+
+  // Pending debts
+  const debts=state.dayDebts.filter(d=>!d.resolved&&(d.employee_id===currentEmpId||d.owed_to===currentEmpId));
+  if(debts.length){
+    h+=`<div class="card"><div class="card-title">📋 Deudas pendientes</div>`;
+    for(const debt of debts){
+      const isOwe=debt.employee_id===currentEmpId;
+      h+=`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px">
+        ${isOwe?'<span style="color:var(--warning)">Debes 1 día</span>':'<span style="color:var(--success)">Te deben 1 día</span>'}
+        <span style="color:var(--text3)"> — ${esc(debt.week_str)||''} ${esc(debt.reason)||''}</span>
+      </div>`;
+    }
+    h+=`</div>`;
+  }
+
+  document.getElementById('panel-home').innerHTML=h;
+}
+
+// Helper: render a week's worth of day rows
+function renderWeekRows(dates,today){
+  let h='';
+  for(let i=0;i<7;i++){
+    const d=dates[i],a=getAssign(d,currentEmpId),t=a.type;
+    const isToday=fmtDate(d)===fmtDate(today);
+    const hol=isHoliday(d);
+    let badge='',cls='free';
+    if(isClosed(d)){badge='Cerrado';cls='free'}
+    else if(t==='inactive'){badge='—';cls='free'}
+    else if(SHIFTS[t]){badge=SHIFTS[t].time;if(t==='morning'||t==='jesus_sat')cls='morning';else if(t==='mid')cls='mid';else cls='afternoon'}
+    else if(ABSENCES[t]){badge=ABSENCES[t].name;cls='vacation'}
+    else{badge='Libre';cls='free'}
+    const task=state.taskAssigns[fmtDate(d)+'_'+currentEmpId];
+    const taskIcon=task==='medios'?'<span style="font-size:10px;margin-left:4px;background:rgba(99,102,241,.2);padding:1px 5px;border-radius:3px;color:var(--accent2)">💬 Medios</span>':'';
+    h+=`<div class="day-row" style="${isToday?'background:rgba(99,102,241,.06);border-radius:8px;padding:10px 12px;margin:-2px -12px;':''}">
+      <div class="day-label">${DAYS[i].slice(0,3)}${isToday?' <span style="font-size:9px;background:var(--accent);color:#fff;padding:1px 5px;border-radius:4px">HOY</span>':''}
+        <span class="date">${fmtShort(d)}</span>
+        ${hol?`<span class="holiday-tag">🔴 ${hol}</span>`:''}
+      </div>
+      <div><span class="shift-badge ${cls}">${badge}</span>${taskIcon}</div>
+    </div>`;
+  }
+  return h;
+}
+
+// ===================== CALENDAR =====================
+let calMonth=new Date().getMonth(),calYear=2026;
+function renderCalendar(){
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const firstDow=(new Date(calYear,calMonth,1).getDay()+6)%7;
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const todayStr=fmtDate(new Date());
+  const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];
+  const midSh=['mid','jesus_sat'];
+
+  let h=`<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <button class="btn" style="padding:6px 12px" onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--}renderCalendar()">◀</button>
+      <span style="font-size:16px;font-weight:700">${monthNames[calMonth]} ${calYear}</span>
+      <button class="btn" style="padding:6px 12px" onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++}renderCalendar()">▶</button>
+    </div>
+    <div class="month-grid">`;
+  
+  ['L','M','X','J','V','S','D'].forEach(d=>h+=`<div class="month-hdr">${d}</div>`);
+  
+  for(let i=0;i<firstDow;i++)h+=`<div class="month-cell"></div>`;
+  
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(calYear,calMonth,day,12);
+    const ds=fmtDate(d);
+    const isToday=ds===todayStr;
+    const hol=isHoliday(d);
+    const a=getAssign(d,currentEmpId);
+    const t=a.type;
+    let dotColor='var(--text3)',dotText='—';
+    if(t==='closed'){dotText='🔒'}
+    else if(t==='inactive'){dotText='—'}
+    else if(SHIFTS[t]){
+      if(t==='morning')dotColor='var(--morning)';
+      else if(midSh.includes(t))dotColor='var(--mid)';
+      else if(tardeSh.includes(t))dotColor='var(--afternoon)';
+      else if(t==='closing')dotColor='var(--closing)';
+      dotText=SHIFTS[t].abbr;
+    }
+    else if(ABSENCES[t]){dotColor=ABSENCES[t].color;dotText=t==='vacation'?'V':t==='sick'?'B':'P'}
+    else{dotText='·'}
+    
+    h+=`<div class="month-cell ${isToday?'today':''}${hol?' holiday-cell':''}" title="${ds}: ${SHIFTS[t]?.name||ABSENCES[t]?.name||'Libre'}${hol?' — 🔴 '+hol:''}">
+      <div class="day-num">${day}</div>
+      <div class="shift-dot" style="color:${dotColor}">${dotText}</div>
+      ${hol?'<div style="font-size:7px;color:var(--danger)">🔴</div>':''}
+    </div>`;
+  }
+  h+=`</div></div>`;
+  
+  // Month summary
+  let mHours=0,mDays=0,mVac=0;
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(calYear,calMonth,day,12);
+    const a=getAssign(d,currentEmpId);
+    if(SHIFTS[a.type]){mHours+=getShiftHours(a.type);mDays++}
+    if(a.type==='vacation')mVac++;
+  }
+  h+=`<div class="card" style="display:flex;gap:12px;justify-content:center;text-align:center">
+    <div><div style="font-size:20px;font-weight:700;color:var(--accent)">${mDays}</div><div style="font-size:10px;color:var(--text3)">Días</div></div>
+    <div><div style="font-size:20px;font-weight:700;color:var(--morning)">${mHours}h</div><div style="font-size:10px;color:var(--text3)">Horas</div></div>
+    <div><div style="font-size:20px;font-weight:700;color:var(--vacation)">${mVac}</div><div style="font-size:10px;color:var(--text3)">Vacaciones</div></div>
+  </div>`;
+  
+  h+=`<div style="text-align:center;margin-top:4px" class="no-print">
+    <button class="btn" style="padding:8px 20px;font-size:12px" onclick="exportMyMonth()">📥 Exportar mi horario</button>
+  </div>`;
+  
+  // ANNUAL HEATMAP
+  const tardeSh2=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];
+  const midSh2=['mid','jesus_sat'];
+  const monthNamesShort=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  
+  h+=`<div class="card" style="margin-top:12px"><div class="card-title">📅 Mi año 2026</div>
+    <div style="overflow-x:auto"><div style="display:flex;gap:3px;min-width:700px">`;
+  
+  for(let mo=0;mo<12;mo++){
+    const dim=new Date(2026,mo+1,0).getDate();
+    const fd=(new Date(2026,mo,1).getDay()+6)%7;
+    
+    h+=`<div style="flex:1;min-width:52px"><div style="text-align:center;font-size:9px;font-weight:700;color:var(--text3);margin-bottom:3px">${monthNamesShort[mo]}</div>`;
+    h+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px">`;
+    
+    for(let i=0;i<fd;i++)h+=`<div style="width:7px;height:7px"></div>`;
+    
+    for(let day=1;day<=dim;day++){
+      const d=new Date(2026,mo,day,12);
+      const a=getAssign(d,currentEmpId);
+      const t=a.type;
+      const hol2=isHoliday(d);
+      let bg='var(--bg3)';
+      if(t==='morning')bg='var(--morning)';
+      else if(midSh2.includes(t))bg='var(--mid)';
+      else if(tardeSh2.includes(t))bg='var(--afternoon)';
+      else if(t==='closing')bg='var(--closing)';
+      else if(t==='vacation')bg='var(--vacation)';
+      else if(t==='sick')bg='var(--sick)';
+      else if(t==='paternity')bg='#90CAF9';
+      else if(t==='closed')bg='var(--text3)';
+      const border=hol2?'border:1px solid var(--danger)':'border:1px solid transparent';
+      h+=`<div style="width:7px;height:7px;border-radius:1px;background:${bg};${border};opacity:${(!t||t==='free'||t==='inactive')?'.2':'1'}" title="${fmtDate(d)}: ${SHIFTS[t]?.name||ABSENCES[t]?.name||'Libre'}${hol2?' 🔴 '+hol2:''}"></div>`;
+    }
+    h+=`</div></div>`;
+  }
+  
+  h+=`</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:9px;color:var(--text3)">
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--morning);vertical-align:middle"></span> Mañana</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--mid);vertical-align:middle"></span> Medio</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--afternoon);vertical-align:middle"></span> Tarde</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--closing);vertical-align:middle"></span> Cierre</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--vacation);vertical-align:middle"></span> Vacaciones</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;background:var(--bg3);opacity:.3;vertical-align:middle"></span> Libre</span>
+      <span><span style="display:inline-block;width:8px;height:8px;border-radius:1px;border:1px solid var(--danger);vertical-align:middle"></span> Festivo</span>
+    </div>
+  </div>`;
+  
+  document.getElementById('panel-calendar').innerHTML=h;
+}
+
+function exportMyMonth(){
+  const emp=employees.find(e=>e.id===currentEmpId);
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const dayAbbr=['L','M','X','J','V','S','D'];
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const firstDow=(new Date(calYear,calMonth,1).getDay()+6)%7;
+  const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];
+  const midSh=['mid','jesus_sat'];
+  
+  let rows=[];
+  // Build calendar grid data
+  let week=[];
+  for(let i=0;i<firstDow;i++)week.push(null);
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(calYear,calMonth,day,12);
+    const a=getAssign(d,currentEmpId);
+    const t=a.type;
+    const hol=isHoliday(d);
+    let txt='—',bg='#f8f9fa',col='#999';
+    if(SHIFTS[t]){
+      txt=SHIFTS[t].time;
+      if(t==='morning'||t==='jesus_sat'){bg='#E1F5FE';col='#0277BD'}
+      else if(midSh.includes(t)){bg='#E8F5E9';col='#2E7D32'}
+      else if(t==='closing'){bg='#F3E5F5';col='#7B1FA2'}
+      else{bg='#FFF3E0';col='#E65100'}
+    } else if(ABSENCES[t]){txt=t==='vacation'?'VAC':t==='sick'?'BAJA':'PERM';bg='#FFFDE7';col='#F57F17'}
+    else if(t==='closed'){txt='🔒'}
+    week.push({day,txt,bg,col,hol});
+    if(week.length===7){rows.push(week);week=[]}
+  }
+  if(week.length)while(week.length<7){week.push(null)}
+  if(week.length)rows.push(week);
+  
+  // Build print HTML
+  let html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Mi Horario — ${emp.name} — ${monthNames[calMonth]} ${calYear}</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:24px;background:#fff;color:#333}
+  h1{font-size:20px;margin-bottom:4px}h2{font-size:14px;color:#666;margin-bottom:16px;font-weight:400}
+  table{width:100%;border-collapse:collapse;margin-bottom:16px}th{padding:8px;text-align:center;font-size:12px;color:#666;border-bottom:2px solid #e5e7eb}
+  td{padding:6px 4px;text-align:center;vertical-align:top;border:1px solid #e5e7eb;height:60px;font-size:11px}
+  .day-num{font-weight:700;font-size:13px;margin-bottom:3px}.shift{padding:3px 6px;border-radius:4px;font-weight:600;font-size:11px}
+  .hol{font-size:8px;color:#dc2626;display:block}.stats{display:flex;gap:24px;justify-content:center;margin-top:8px;font-size:13px}
+  .stats span{font-weight:700}@media print{body{padding:12px}}
+  </style></head><body>
+  <h1>${emp.name}</h1>
+  <h2>${monthNames[calMonth]} ${calYear}</h2>
+  <table><tr>`;
+  for(const d of dayAbbr)html+=`<th>${d}</th>`;
+  html+=`</tr>`;
+  for(const row of rows){
+    html+=`<tr>`;
+    for(const cell of row){
+      if(!cell){html+=`<td></td>`;continue}
+      html+=`<td><div class="day-num">${cell.day}</div><div class="shift" style="background:${cell.bg};color:${cell.col}">${cell.txt}</div>${cell.hol?`<span class="hol">🔴 ${cell.hol}</span>`:''}</td>`;
+    }
+    html+=`</tr>`;
+  }
+  
+  // Stats
+  let mHours=0,mDays=0,mVac=0;
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(calYear,calMonth,day,12);
+    const a=getAssign(d,currentEmpId);
+    if(SHIFTS[a.type]){mHours+=getShiftHours(a.type);mDays++}
+    if(a.type==='vacation')mVac++;
+  }
+  html+=`</table><div class="stats"><div>${mDays} días · <span>${mHours}h</span></div><div>Vacaciones: <span>${mVac} días</span></div></div>
+  <script>window.onload=()=>window.print()<\/script></body></html>`;
+  
+  const w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ===================== NÓMINA (Nocturnas + Festivas) =====================
+const NIGHT_HOURS={morning:0,mid:0,afternoon:1,closing:2,afternoon_14_22:0,jesus_fri:2,jesus_sat:0,jesus_sun:2};
+
+function calcNightHours(shiftType){return NIGHT_HOURS[shiftType]||0}
+function calcFestiveHours(shiftType){return shiftType&&SHIFTS[shiftType]?getShiftHours(shiftType):0}
+
+function getMonthNightFestive(empId,year,month){
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const nights=[],festives=[];
+  
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(year,month,day,12);
+    const ds=fmtDate(d);
+    const a=getAssign(d,empId);
+    const t=a.type;
+    if(!t||!SHIFTS[t])continue;
+    
+    // Night hours
+    const nh=calcNightHours(t);
+    if(nh>0)nights.push({date:ds,shift:SHIFTS[t].time,hours:nh,auto:true});
+    
+    // Festive hours
+    const hol=isHoliday(d);
+    if(hol){
+      const fh=calcFestiveHours(t);
+      if(fh>0)festives.push({date:ds,shift:SHIFTS[t].time,hours:fh,holiday:hol,auto:true});
+    }
+  }
+  return{nights,festives};
+}
+
+function mergeWithManual(autoEntries,manualEntries,type,month){
+  // Manual entries override auto for same date, or add new ones
+  const monthPrefix=month; // '2026-03'
+  const manual=manualEntries.filter(e=>e.type===type&&e.month===monthPrefix);
+  const merged=new Map();
+  
+  for(const e of autoEntries)merged.set(e.date,{...e,source:'auto'});
+  for(const e of manual){
+    if(e.deleted){merged.delete(e.date);continue}
+    merged.set(e.date,{date:e.date,shift:e.shift_time,hours:e.hours,auto:false,source:'manual',holiday:esc(e.holiday)||'',id:e.id});
+  }
+  return Array.from(merged.values()).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+let nominaMonth=new Date().getMonth(),nominaYear=2026;
+
+function renderNomina(){
+  const emp=employees.find(e=>e.id===currentEmpId);
+  if(!emp)return;
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const monthKey=`${nominaYear}-${String(nominaMonth+1).padStart(2,'0')}`;
+  
+  const auto=getMonthNightFestive(currentEmpId,nominaYear,nominaMonth);
+  const nights=mergeWithManual(auto.nights,state.nominaEntries,'night',monthKey);
+  const festives=mergeWithManual(auto.festives,state.nominaEntries,'festive',monthKey);
+  const totalNight=nights.reduce((s,e)=>s+e.hours,0);
+  const totalFestive=festives.reduce((s,e)=>s+e.hours,0);
+  
+  // Check if month is validated and/or approved
+  const validated=state.nominaEntries.some(e=>e.month===monthKey&&e.type==='validation'&&e.validated);
+  const approved=state.nominaEntries.some(e=>e.month===monthKey&&e.type==='approval'&&e.validated);
+  const hasManual=nights.some(e=>e.source==='manual')||festives.some(e=>e.source==='manual');
+  
+  let statusHtml;
+  if(approved){
+    statusHtml=`<span style="font-size:11px;padding:4px 10px;background:rgba(34,197,94,.15);color:var(--success);border-radius:6px;font-weight:600">✅ Aprobado por Silvia</span>`;
+  } else if(validated){
+    statusHtml=`<span style="font-size:11px;padding:4px 10px;background:rgba(99,102,241,.15);color:var(--accent2);border-radius:6px;font-weight:600">📩 Validado — pendiente aprobación</span>`;
+  } else {
+    statusHtml=`<button class="btn btn-primary" style="padding:6px 14px;font-size:12px" onclick="validateMonth('${monthKey}')">✅ Validar mes</button>`;
+  }
+  
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn" style="padding:6px 12px" onclick="nominaMonth--;if(nominaMonth<0){nominaMonth=11;nominaYear--}renderNomina()">◀</button>
+      <span style="font-size:16px;font-weight:700">${monthNames[nominaMonth]} ${nominaYear}</span>
+      <button class="btn" style="padding:6px 12px" onclick="nominaMonth++;if(nominaMonth>11){nominaMonth=0;nominaYear++}renderNomina()">▶</button>
+    </div>
+    <div style="display:flex;gap:6px">
+      ${statusHtml}
+    </div>
+  </div>`;
+  
+  // Summary cards
+  h+=`<div style="display:flex;gap:10px;margin-bottom:16px">
+    <div class="card" style="flex:1;text-align:center;padding:14px;border-left:3px solid var(--closing)">
+      <div style="font-size:10px;color:var(--text3);font-weight:600">HORAS NOCTURNAS</div>
+      <div style="font-size:28px;font-weight:700;color:var(--closing)">${totalNight}</div>
+      <div style="font-size:10px;color:var(--text3)">${nights.length} día${nights.length!==1?'s':''}</div>
+    </div>
+    <div class="card" style="flex:1;text-align:center;padding:14px;border-left:3px solid var(--danger)">
+      <div style="font-size:10px;color:var(--text3);font-weight:600">HORAS FESTIVAS</div>
+      <div style="font-size:28px;font-weight:700;color:var(--danger)">${totalFestive}</div>
+      <div style="font-size:10px;color:var(--text3)">${festives.length} día${festives.length!==1?'s':''}</div>
+    </div>
+  </div>`;
+  
+  // Night hours table
+  h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="card-title" style="margin:0">🌙 Horas Nocturnas</div>
+    <button class="btn" style="padding:3px 8px;font-size:10px" onclick="addManualEntry('night','${monthKey}')">+ Añadir</button>
+  </div>`;
+  if(!nights.length){
+    h+=`<div style="font-size:12px;color:var(--text3);padding:8px 0">Sin horas nocturnas este mes</div>`;
+  } else {
+    h+=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Fecha</th><th style="text-align:center;padding:4px;color:var(--text3);font-size:11px">Horario</th><th style="text-align:center;padding:4px;color:var(--text3);font-size:11px">Horas</th><th style="width:30px"></th></tr>`;
+    for(const e of nights){
+      const d=new Date(e.date+'T12:00:00');
+      const dayName=DAYS[(d.getDay()+6)%7].slice(0,3);
+      const dd=e.date.slice(8)+'/'+e.date.slice(5,7);
+      const manual=e.source==='manual';
+      h+=`<tr style="border-bottom:1px solid var(--border)${manual?';background:rgba(99,102,241,.06)':''}">
+        <td style="padding:5px 6px">${dayName} ${dd}${manual?' <span style="font-size:9px;color:var(--accent2)">✎</span>':''}</td>
+        <td style="text-align:center;padding:5px;color:var(--closing)">${e.shift}</td>
+        <td style="text-align:center;padding:5px;font-weight:700">${e.hours}h</td>
+        <td style="text-align:center">${manual?`<span style="cursor:pointer;font-size:12px" onclick="deleteManualEntry('${e.id}')">✕</span>`:''}</td>
+      </tr>`;
+    }
+    h+=`<tr style="font-weight:700"><td style="padding:6px" colspan="2">Total</td><td style="text-align:center;padding:6px;color:var(--closing)">${totalNight}h</td><td></td></tr></table>`;
+  }
+  h+=`</div>`;
+  
+  // Festive hours table
+  h+=`<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div class="card-title" style="margin:0">🔴 Horas Festivas</div>
+    <button class="btn" style="padding:3px 8px;font-size:10px" onclick="addManualEntry('festive','${monthKey}')">+ Añadir</button>
+  </div>`;
+  if(!festives.length){
+    h+=`<div style="font-size:12px;color:var(--text3);padding:8px 0">Sin horas festivas este mes</div>`;
+  } else {
+    h+=`<table style="width:100%;border-collapse:collapse;font-size:12px">
+      <tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:4px 6px;color:var(--text3);font-size:11px">Fecha</th><th style="text-align:left;padding:4px;color:var(--text3);font-size:11px">Festivo</th><th style="text-align:center;padding:4px;color:var(--text3);font-size:11px">Horario</th><th style="text-align:center;padding:4px;color:var(--text3);font-size:11px">Horas</th><th style="width:30px"></th></tr>`;
+    for(const e of festives){
+      const d=new Date(e.date+'T12:00:00');
+      const dayName=DAYS[(d.getDay()+6)%7].slice(0,3);
+      const dd=e.date.slice(8)+'/'+e.date.slice(5,7);
+      const manual=e.source==='manual';
+      h+=`<tr style="border-bottom:1px solid var(--border)${manual?';background:rgba(99,102,241,.06)':''}">
+        <td style="padding:5px 6px">${dayName} ${dd}${manual?' <span style="font-size:9px;color:var(--accent2)">✎</span>':''}</td>
+        <td style="padding:5px;font-size:11px;color:var(--danger)">${esc(e.holiday)||''}</td>
+        <td style="text-align:center;padding:5px">${e.shift}</td>
+        <td style="text-align:center;padding:5px;font-weight:700">${e.hours}h</td>
+        <td style="text-align:center">${manual?`<span style="cursor:pointer;font-size:12px" onclick="deleteManualEntry('${e.id}')">✕</span>`:''}</td>
+      </tr>`;
+    }
+    h+=`<tr style="font-weight:700"><td style="padding:6px" colspan="3">Total</td><td style="text-align:center;padding:6px;color:var(--danger)">${totalFestive}h</td><td></td></tr></table>`;
+  }
+  h+=`</div>`;
+  
+  // Export button
+  h+=`<div style="text-align:center;margin-top:8px" class="no-print">
+    <button class="btn" style="padding:8px 20px;font-size:12px" onclick="exportNomina('${monthKey}')">📥 Exportar Excel</button>
+  </div>`;
+  
+  document.getElementById('panel-nomina').innerHTML=h;
+}
+
+async function validateMonth(monthKey){
+  const entry={id:crypto.randomUUID(),employee_id:currentEmpId,date:monthKey+'-01',type:'validation',shift_time:'',hours:0,auto_calculated:false,validated:true,validated_at:new Date().toISOString(),month:monthKey};
+  state.nominaEntries.push(entry);
+  try{await db.from('night_festive_entries').insert(entry)}catch(e){}
+  renderNomina();
+  showToast('✅ Mes validado — Silvia recibirá la confirmación','success');
+}
+
+function addManualEntry(type,monthKey){
+  const monthNum=parseInt(monthKey.split('-')[1])-1;
+  const year=parseInt(monthKey.split('-')[0]);
+  const shifts=Object.entries(SHIFTS).filter(([k])=>!k.startsWith('jesus_'));
+  
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center';
+  modal.onclick=e=>{if(e.target===modal)modal.remove()};
+  
+  const shiftOpts=shifts.map(([k,s])=>`<option value="${k}">${s.name} (${s.time})</option>`).join('');
+  const label=type==='night'?'🌙 Añadir hora nocturna':'🔴 Añadir hora festiva';
+  
+  modal.innerHTML=`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:360px;width:90%" onclick="event.stopPropagation()">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">${label}</div>
+    <div class="swap-form">
+      <div class="field"><label>Fecha</label><input type="date" id="manDate"></div>
+      <div class="field"><label>Turno</label><select id="manShift">${shiftOpts}</select></div>
+      <div class="field"><label>Horas</label><input type="number" id="manHours" min="1" max="12" value="${type==='night'?'1':'8'}"></div>
+      ${type==='festive'?'<div class="field"><label>Festivo</label><input type="text" id="manHoliday" placeholder="Ej: San Ignacio"></div>':''}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn" style="flex:1" onclick="this.closest('div[style*=fixed]').remove()">Cancelar</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveManualEntry('${type}','${monthKey}')">Guardar</button>
+      </div>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveManualEntry(type,monthKey){
+  const date=document.getElementById('manDate').value;
+  const shiftKey=document.getElementById('manShift').value;
+  const hours=parseFloat(document.getElementById('manHours').value);
+  const holiday=document.getElementById('manHoliday')?.value||'';
+  
+  if(!date||!hours){showToast('Completa todos los campos','error');return}
+  
+  const entry={id:crypto.randomUUID(),employee_id:currentEmpId,date,type,shift_time:SHIFTS[shiftKey]?.time||'',hours,auto_calculated:false,validated:false,validated_at:null,month:monthKey,holiday};
+  state.nominaEntries.push(entry);
+  try{await db.from('night_festive_entries').insert(entry)}catch(e){}
+  
+  document.querySelector('div[style*="fixed"][style*="inset"]')?.remove();
+  renderNomina();
+  showToast('✅ Entrada añadida','success');
+}
+
+async function deleteManualEntry(id){
+  if(!confirm('¿Eliminar esta entrada manual?'))return;
+  state.nominaEntries=state.nominaEntries.filter(e=>e.id!==id);
+  try{await db.from('night_festive_entries').delete().eq('id',id)}catch(e){}
+  renderNomina();
+  showToast('Entrada eliminada','success');
+}
+
+function exportNomina(monthKey){
+  const emp=employees.find(e=>e.id===currentEmpId);
+  const monthNames=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mo=parseInt(monthKey.split('-')[1])-1;
+  const yr=parseInt(monthKey.split('-')[0]);
+  const auto=getMonthNightFestive(currentEmpId,yr,mo);
+  const nights=mergeWithManual(auto.nights,state.nominaEntries,'night',monthKey);
+  const festives=mergeWithManual(auto.festives,state.nominaEntries,'festive',monthKey);
+  
+  const wb=XLSX.utils.aoa_to_sheet([]);
+  const rows=[];
+  
+  // Header
+  rows.push([monthNames[mo].toUpperCase()]);
+  rows.push(['HORAS NOCTURNAS SAC','','','','','','HORAS FESTIVAS SAC']);
+  rows.push(['TRABAJADOR/A','','','','','','TRABAJADOR/A']);
+  rows.push([]);
+  rows.push([emp.name,'FECHA','HORARIO','TOTAL HORAS DÍA','TOTAL MES','',emp.name,'FECHA','HORARIO','TOTAL HORAS DÍA','TOTAL MES']);
+  
+  const maxRows=Math.max(nights.length,festives.length,1);
+  let nightTotal=0,festiveTotal=0;
+  for(let i=0;i<maxRows;i++){
+    const row=[];
+    if(nights[i]){
+      const dd=nights[i].date.slice(8)+'/'+nights[i].date.slice(5,7)+'/'+nights[i].date.slice(0,4);
+      row.push('',dd,nights[i].shift,nights[i].hours,'');
+      nightTotal+=nights[i].hours;
+    } else row.push('','','','','');
+    row.push('');
+    if(festives[i]){
+      const dd=festives[i].date.slice(8)+'/'+festives[i].date.slice(5,7)+'/'+festives[i].date.slice(0,4);
+      row.push('',dd,festives[i].shift,festives[i].hours,'');
+      festiveTotal+=festives[i].hours;
+    } else row.push('','','','','');
+    rows.push(row);
+  }
+  rows.push([]);
+  rows.push(['','','','',nightTotal,'','','','','',festiveTotal]);
+  
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:18},{wch:12},{wch:14},{wch:16},{wch:12},{wch:3},{wch:18},{wch:12},{wch:14},{wch:16},{wch:12}];
+  const wbk=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wbk,ws,monthNames[mo]);
+  XLSX.writeFile(wbk,`Nocturnas_Festivas_${emp.name}_${monthKey}.xlsx`);
+  showToast('📥 Excel exportado','success');
+}
+
+// ===================== TEAM SCHEDULE =====================
+function renderTeam(){
+  const dates=weekDates(state.currentWeekStart);
+  const todayStr=fmtDate(new Date());
+  const tardeSh=['afternoon','closing','afternoon_14_22','jesus_fri','jesus_sun'];
+  const midSh=['mid','jesus_sat'];
+
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <button class="btn" style="padding:6px 12px" onclick="state.currentWeekStart=addDays(state.currentWeekStart,-7);renderTeam()">◀</button>
+    <span style="font-size:13px;font-weight:600">${fmtShort(dates[0])} — ${fmtShort(dates[6])}</span>
+    <button class="btn" style="padding:6px 12px" onclick="state.currentWeekStart=addDays(state.currentWeekStart,7);renderTeam()">▶</button>
+  </div>`;
+  
+  h+=`<div style="overflow-x:auto"><table class="sched-table"><tr><th style="min-width:70px"></th>`;
+  for(let i=0;i<7;i++){
+    const d=dates[i];const hol=isHoliday(d);
+    h+=`<th${hol?' class="holiday"':''}>${DAYS[i].slice(0,3)}<br>${fmtShort(d)}${hol?'<br><span style="font-size:7px;color:var(--danger)">🔴</span>':''}</th>`;
+  }
+  h+=`</tr>`;
+  
+  for(const emp of employees){
+    let hasShift=false;
+    for(let i=0;i<7;i++){const a=getAssign(dates[i],emp.id);if(a.type&&a.type!=='inactive'&&a.type!=='free')hasShift=true}
+    if(!hasShift)continue;
+    const isMe=emp.id===currentEmpId;
+    h+=`<tr${isMe?' style="background:rgba(99,102,241,.06)"':''}>`;
+    h+=`<td class="emp-n" style="${isMe?'color:var(--accent2);font-weight:700':'color:var(--text)'}">${emp.name}${isMe?' ⭐':''}</td>`;
+    for(let i=0;i<7;i++){
+      const d=dates[i],a=getAssign(d,emp.id),t=a.type;
+      let cls='s-f',txt='—';
+      if(t==='closed'){txt='🔒'}
+      else if(SHIFTS[t]){
+        txt=SHIFTS[t].abbr;
+        if(t==='morning')cls='s-m';
+        else if(midSh.includes(t))cls='s-me';
+        else if(t==='closing')cls='s-c';
+        else if(tardeSh.includes(t))cls='s-t';
+      }
+      else if(ABSENCES[t]){cls='s-a';txt=t==='vacation'?'VAC':t==='sick'?'BAJA':'AUS'}
+      else{txt='·'}
+      const meClass=isMe&&SHIFTS[t]?' me':'';
+      h+=`<td class="${cls}${meClass}" title="${emp.name}: ${SHIFTS[t]?.name||ABSENCES[t]?.name||'Libre'}">${txt}</td>`;
+    }
+    h+=`</tr>`;
+  }
+  h+=`</table></div>`;
+  
+  document.getElementById('panel-team').innerHTML=h;
+}
+
+// ===================== SWAP REQUESTS =====================
+function renderSwap(){
+  const emp=employees.find(e=>e.id===currentEmpId);
+  const eo=employees.filter(e=>e.id!==currentEmpId).map(e=>`<option value="${e.id}">${e.name}</option>`).join('');
+  
+  let h=`<div class="card"><div class="card-title">🔄 Solicitar cambio</div>
+    <div class="swap-form">
+      <div class="field"><label>Tipo de cambio</label>
+        <select id="swType" onchange="toggleSwapFields();validateSwap()">
+          <option value="day">Cambio de día — alguien me cubre</option>
+          <option value="shift">Cambio de turno — cambiar mi franja</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha</label><input type="date" id="swDate" value="${fmtDate(new Date())}" onchange="validateSwap()"></div>
+      <div id="dayFields">
+        <div class="field"><label>Quién me cubre</label><select id="swCover" onchange="validateSwap()"><option value="">Seleccionar...</option>${eo}</select></div>
+      </div>
+      <div id="shiftFields" style="display:none">
+        <div class="field"><label>Turno deseado</label>
+          <select id="swShift" onchange="validateSwap()">${Object.entries(SHIFTS).filter(([k])=>!k.startsWith('jesus_')).map(([k,s])=>`<option value="${k}">${s.name} (${s.time})</option>`).join('')}</select>
+        </div>
+      </div>
+      <div id="swapPreview"></div>
+      <div class="field"><label>Motivo</label><textarea id="swReason" rows="2" placeholder="Ej: cita médica, compromiso personal..."></textarea></div>
+      <button class="btn btn-primary" style="width:100%" onclick="submitSwap()">Enviar solicitud</button>
+    </div>
+  </div>`;
+  
+  // My swap history
+  const mySwaps=state.swapRequests.filter(s=>s.requester_id===currentEmpId||s.cover_id===currentEmpId).slice(0,20);
+  h+=`<div class="card"><div class="card-title">📋 Mis cambios</div>`;
+  if(!mySwaps.length)h+=`<div style="font-size:12px;color:var(--text3)">Sin cambios registrados</div>`;
+  else for(const s of mySwaps){
+    const re=employees.find(e=>e.id===s.requester_id);
+    const ce=employees.find(e=>e.id===s.cover_id);
+    const isReq=s.requester_id===currentEmpId;
+    const status=s.status;
+    h+=`<div class="swap-item ${status}">
+      <div style="font-size:12px;font-weight:600">${isReq?'Solicité librarme':'Cubrí a '+(re?.name||'?')} — ${s.date}</div>
+      <div style="font-size:11px;color:var(--text2)">${isReq&&ce?'Cubre: '+ce.name:''} ${s.reason?'· '+esc(s.reason):''}</div>
+      <div style="font-size:10px;margin-top:4px;color:${status==='approved'?'var(--success)':status==='rejected'?'var(--danger)':'var(--warning)'}">${status==='approved'?'✅ Aprobado':status==='rejected'?'❌ Rechazado':'⏳ Pendiente'}</div>
+    </div>`;
+  }
+  h+=`</div>`;
+
+  document.getElementById('panel-swap').innerHTML=h;
+}
+
+function toggleSwapFields(){
+  const t=document.getElementById('swType').value;
+  document.getElementById('dayFields').style.display=t==='day'?'block':'none';
+  document.getElementById('shiftFields').style.display=t==='shift'?'block':'none';
+}
+
+function validateSwap(){
+  const p=document.getElementById('swapPreview');
+  if(!p)return;
+  const ds=document.getElementById('swDate').value;
+  const type=document.getElementById('swType').value;
+  if(!ds){p.innerHTML='';return}
+  
+  const d=new Date(ds+'T12:00:00');
+  const myAssign=getAssign(d,currentEmpId);
+  const myShift=myAssign.type;
+  const hol=isHoliday(d);
+  let h='';
+  
+  // Show my shift that day
+  if(SHIFTS[myShift]){
+    h+=`<div style="padding:6px 10px;background:var(--bg3);border-radius:6px;margin-bottom:8px;font-size:12px">
+      Tu turno: <strong style="color:${SHIFTS[myShift].color}">${SHIFTS[myShift].name} (${SHIFTS[myShift].time})</strong>
+      ${hol?`<span style="color:var(--danger);margin-left:6px">🔴 ${hol}</span>`:''}
+    </div>`;
+  } else if(myShift==='free'||!myShift){
+    h+=`<div style="padding:6px 10px;background:rgba(245,158,11,.1);border-radius:6px;margin-bottom:8px;font-size:12px;color:var(--warning)">⚠ No tienes turno ese día</div>`;
+  } else if(ABSENCES[myShift]){
+    h+=`<div style="padding:6px 10px;background:rgba(239,68,68,.1);border-radius:6px;margin-bottom:8px;font-size:12px;color:var(--danger)">⚠ Tienes ${ABSENCES[myShift].name} ese día</div>`;
+  }
+  
+  if(type==='day'){
+    const covId=document.getElementById('swCover').value;
+    if(covId){
+      const covEmp=employees.find(e=>e.id===covId);
+      const covAssign=getAssign(d,covId);
+      const covType=covAssign.type;
+      
+      if(!covType||covType==='free'||covType==='inactive'){
+        h+=`<div style="padding:6px 10px;background:rgba(34,197,94,.1);border-radius:6px;font-size:12px;color:var(--success)">✅ ${covEmp.name} está <strong>libre</strong> ese día — puede cubrirte</div>`;
+      } else if(SHIFTS[covType]){
+        h+=`<div style="padding:6px 10px;background:rgba(245,158,11,.1);border-radius:6px;font-size:12px;color:var(--warning)">⚠ ${covEmp.name} ya trabaja: <strong>${SHIFTS[covType].name} (${SHIFTS[covType].time})</strong></div>`;
+      } else if(ABSENCES[covType]){
+        h+=`<div style="padding:6px 10px;background:rgba(239,68,68,.1);border-radius:6px;font-size:12px;color:var(--danger)">❌ ${covEmp.name} tiene <strong>${ABSENCES[covType].name}</strong> — no puede cubrirte</div>`;
+      }
+    }
+  } else {
+    // Shift change: show what I'd be changing to
+    const newShift=document.getElementById('swShift')?.value;
+    if(newShift&&SHIFTS[newShift]&&SHIFTS[myShift]){
+      h+=`<div style="padding:6px 10px;background:rgba(99,102,241,.1);border-radius:6px;font-size:12px;color:var(--accent2)">
+        Cambio: ${SHIFTS[myShift].name} → <strong>${SHIFTS[newShift].name} (${SHIFTS[newShift].time})</strong>
+      </div>`;
+    }
+  }
+  p.innerHTML=h;
+}
+
+async function submitSwap(){
+  const type=document.getElementById('swType').value;
+  const ds=document.getElementById('swDate').value;
+  const reason=document.getElementById('swReason').value;
+  if(!ds){showToast('Selecciona fecha','error');return}
+  
+  const d=new Date(ds+'T12:00:00');
+  const myShift=getAssign(d,currentEmpId);
+  
+  if(type==='day'){
+    const covId=document.getElementById('swCover').value;
+    if(!covId){showToast('Selecciona quién te cubre','error');return}
+    const sw={id:crypto.randomUUID(),requester_id:currentEmpId,cover_id:covId,date:ds,requester_shift:myShift.type,swap_type:'day',status:'pending',reason,created_at:new Date().toISOString(),resolved_at:null,return_date:null,return_resolved:false};
+    state.swapRequests.unshift(sw);
+    await db.from('swap_requests').insert(sw);
+    showToast('✅ Solicitud enviada — pendiente de aprobación','success');
+  } else {
+    const newShift=document.getElementById('swShift').value;
+    const sw={id:crypto.randomUUID(),requester_id:currentEmpId,cover_id:currentEmpId,date:ds,requester_shift:myShift.type,swap_type:'shift',new_shift:newShift,status:'pending',reason,created_at:new Date().toISOString(),resolved_at:null,return_date:null,return_resolved:true};
+    state.swapRequests.unshift(sw);
+    await db.from('swap_requests').insert(sw);
+    showToast('✅ Solicitud de cambio de turno enviada','success');
+  }
+  renderSwap();
+}
+
+function showToast(msg,type='success'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';setTimeout(()=>t.classList.remove('show'),3500)}
+</script>
+</body>
+</html>
